@@ -44,6 +44,8 @@ Emotes go straight to whoever you have targeted. The wheel shows their name and 
 
 Choose 4 to 12 slots and put any emote on any slot: click a slot, then pick from a searchable list of every emote in the game. <kbd>Shift</kbd>-click an emote to try it out first. New slots start with popular emotes.
 
+<img src="docs/images/gallery-editor.jpg" alt="Arrange the wheel" width="900">
+
 ### Minimap button
 
 Left-click opens the settings, right-click opens the wheel. Don't like minimap buttons? Turn it off in the settings.

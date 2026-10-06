@@ -50,6 +50,8 @@ Emotes go straight to whoever you have targeted. The wheel shows their name and 
 
 Choose 4 to 12 slots and put any emote on any slot: click a slot, then pick from a searchable list of every emote in the game. Shift-click an emote to try it out first. New slots start with popular emotes.
 
+![Arrange the wheel](https://raw.githubusercontent.com/palanimForever/EmoteForever/main/docs/images/gallery-editor.jpg)
+
 ## Usage
 
 - **Hold your key, aim, release** – perform an emote
@@ -82,3 +84,4 @@ Images are built in the author's workspace; upload them under Images in this ord
 | 1 | EmoteForever | An emote wheel in Forever's own style – hold, aim, release |
 | 2 | Hold. Aim. Release. | Hold your key, move towards an emote and let go – your character performs it |
 | 3 | Right at your target | Emotes go to your target; the wheel shows who that is |
+| 4 | Your own wheel | 4 to 12 slots, any emote of the game, in a searchable editor |
