@@ -1,0 +1,24 @@
+# On every version tag (e.g. v0.3.0), builds the addon zip and uploads it to CurseForge and as a GitHub release.
+# Requires "## X-Curse-Project-ID" in the TOC and the repository secret CF_API_KEY.
+# The packager recognizes Forever (interface 16001) since v2.6.1.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: BigWigsMods/packager@v2
