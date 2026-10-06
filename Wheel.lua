@@ -13,7 +13,7 @@ local L = ns.L
 local Wheel = {}
 ns.Wheel = Wheel
 
-local RADIUS = { symbols = 92, names = 104 } -- distance of the slot centers from the wheel center
+local RADIUS = 92 -- distance of the slot centers from the wheel center
 local DEAD_ZONE = 24 -- pixels around the center without a selection
 local TAP_TIME = 0.25 -- seconds; a shorter press opens the click mode
 local REOPEN_BLOCK = 0.1 -- seconds; a click outside closes the wheel and must not reopen it via the binding
@@ -31,10 +31,6 @@ local SLOT_RING_SIZE = SLOT_SIZE / 0.7 -- the ring texture's outer edge is at 70
 local SLOT_BACKGROUND_SIZE = 38 -- fills the ring's inner opening
 local SLOT_SYMBOL_SIZE = 30
 local SELECTED_SCALE = 1.15
-
-local PLATE_HEIGHT = 26
-local PLATE_PADDING = 14
-local PLATE_BORDER_COLOR = { 0.55, 0.38, 0.18 }
 
 local DISC_SIZE = 300
 local DISC_ALPHA = 0.6
@@ -64,13 +60,6 @@ local TEXTURE_RING_POINTER = "Interface\\AddOns\\" .. addonName .. "\\Media\\rin
 local TEXTURE_DISC = "Interface\\AddOns\\" .. addonName .. "\\Media\\disc" -- soft round backdrop, white
 ns.TEXTURE_RING = TEXTURE_RING
 
-local PLATE_BACKDROP = {
-    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    edgeSize = 12,
-    insets = { left = 3, right = 3, top = 3, bottom = 3 },
-}
-
 -- Angle of slot i in radians, slot 1 at the top, clockwise.
 local function SlotAngle(i, count)
     return math.pi / 2 - (i - 1) * 2 * math.pi / count
@@ -89,7 +78,6 @@ local function CreateSlot(parent)
     local slot = CreateFrame("Frame", nil, parent)
     slot:SetSize(SLOT_SIZE, SLOT_SIZE)
 
-    -- Symbol style
     local symbol = CreateFrame("Frame", nil, slot)
     symbol:SetSize(SLOT_SIZE, SLOT_SIZE)
     symbol:SetPoint("CENTER")
@@ -118,59 +106,32 @@ local function CreateSlot(parent)
     slot.label = symbol:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     slot.label:SetPoint("TOP", symbol, "BOTTOM", 0, -1)
 
-    -- Name style
-    local plate = CreateFrame("Frame", nil, slot, "BackdropTemplate")
-    plate:SetHeight(PLATE_HEIGHT)
-    plate:SetPoint("CENTER")
-    plate:SetBackdrop(PLATE_BACKDROP)
-    plate.text = plate:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    plate.text:SetPoint("CENTER")
-    slot.plate = plate
-
     return slot
 end
 
 local function ApplySlotStyle(slot, isSelected)
-    if EmoteForeverDB.wheelStyle == "symbols" then
-        slot.symbolFrame:SetScale(isSelected and SELECTED_SCALE or 1)
-        slot.glow:SetShown(isSelected)
-        local color = isSelected and BRONZE_BRIGHT or BRONZE
-        slot.icon:SetVertexColor(color:GetRGB())
-        slot.label:SetTextColor(color:GetRGB())
-    else
-        slot.plate:SetBackdropColor(0, 0, 0, isSelected and 0.95 or 0.75)
-        if isSelected then
-            slot.plate:SetBackdropBorderColor(BRONZE:GetRGB())
-            slot.plate.text:SetTextColor(BRONZE_BRIGHT:GetRGB())
-        else
-            slot.plate:SetBackdropBorderColor(unpack(PLATE_BORDER_COLOR))
-            slot.plate.text:SetTextColor(BRONZE:GetRGB())
-        end
-    end
+    slot.symbolFrame:SetScale(isSelected and SELECTED_SCALE or 1)
+    slot.glow:SetShown(isSelected)
+    local color = isSelected and BRONZE_BRIGHT or BRONZE
+    slot.icon:SetVertexColor(color:GetRGB())
+    slot.label:SetTextColor(color:GetRGB())
 end
 
 -- View: methods mixed into the frame returned by Wheel.CreateView.
 local View = {}
 
--- Builds the slots for the current wheel and style.
+-- Builds the slots for the current wheel.
 function View:Layout()
-    local style = EmoteForeverDB.wheelStyle
     local tokens = EmoteForeverDB.wheel
-    local radius = RADIUS[style]
     for i, token in ipairs(tokens) do
         local slot = self.slots[i] or CreateSlot(self)
         self.slots[i] = slot
         slot.index, slot.token = i, token
-        local label = ns.Emotes.GetLabel(token)
         slot.icon:SetTexture(ns.Emotes.GetIcon(token))
-        slot.label:SetText(label)
-        slot.plate.text:SetText(label)
-        slot.plate:SetWidth(slot.plate.text:GetStringWidth() + 2 * PLATE_PADDING)
-        slot.symbolFrame:SetShown(style == "symbols")
-        slot.plate:SetShown(style == "names")
+        slot.label:SetText(ns.Emotes.GetLabel(token))
         local angle = SlotAngle(i, #tokens)
         slot:ClearAllPoints()
-        slot:SetPoint("CENTER", radius * math.cos(angle), radius * math.sin(angle))
+        slot:SetPoint("CENTER", RADIUS * math.cos(angle), RADIUS * math.sin(angle))
         slot:Show()
         ApplySlotStyle(slot, i == self.selected)
     end

@@ -49,18 +49,6 @@ local function Slider(category, key, name, tooltip, min, max, step, formatter, o
     return Settings.CreateSlider(category, Register(category, key, name, onChange), options, tooltip)
 end
 
--- entries: list of { value, label }
-local function Dropdown(category, key, name, tooltip, entries)
-    local function GetOptions()
-        local container = Settings.CreateControlTextContainer()
-        for _, entry in ipairs(entries) do
-            container:Add(entry[1], entry[2])
-        end
-        return container:GetData()
-    end
-    return Settings.CreateDropdown(category, Register(category, key, name), GetOptions, tooltip)
-end
-
 -- Blizzard's own key binding row (as in Options → Keybindings): click it, then press a key or mouse button.
 local function KeyBinding(category)
     local bindingIndex = C_KeyBindings and C_KeyBindings.GetBindingIndex(ns.BINDING)
@@ -78,10 +66,6 @@ local function RegisterMainPage(category)
     Header(category, L.optSectionWheel)
     Button(category, L.optEditor, L.optEditorButton, function() Options:OpenEditor() end, L.optEditorTip)
     Slider(category, "wheelSize", L.optSize, L.optSizeTip, ns.MIN_SLOTS, ns.MAX_SLOTS, 1, nil, ns.ResizeWheel)
-    Dropdown(category, "wheelStyle", L.optStyle, L.optStyleTip, {
-        { "symbols", L.optStyleSymbols },
-        { "names", L.optStyleNames },
-    })
     Slider(category, "wheelScale", L.optScale, nil, 70, 150, 5, function(value)
         return string.format("%d %%", value)
     end)

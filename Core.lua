@@ -16,7 +16,6 @@ ns.defaults = {
     -- Emote tokens of the wheel, clockwise from the top.
     wheel = { "WAVE", "THANK", "DANCE", "KISS", "LAUGH", "CHEER", "BOW", "HELLO" },
     wheelSize = 8, -- number of slots; kept in sync with #wheel
-    wheelStyle = "symbols", -- "symbols" | "names"
     wheelScale = 100, -- percent
     showMinimapButton = true,
     minimap = {}, -- minimap button position, managed by LibDBIcon
@@ -130,6 +129,7 @@ function handlers.ADDON_LOADED(name)
     EmoteForeverDB.probe = EmoteForeverDB.probe or {}
     EmoteForeverDB.probe.tests = EmoteForeverDB.probe.tests or {}
     EmoteForeverDB.wheelSize = #EmoteForeverDB.wheel
+    EmoteForeverDB.wheelStyle = nil -- removed option (names-only style)
 
     ns.Options:Register()
     ns.MinimapButton:Init()
