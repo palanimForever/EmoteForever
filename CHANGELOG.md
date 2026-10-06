@@ -1,6 +1,6 @@
 # EmoteForever Changelog
 
-## Unreleased
+## 0.1.0-beta
 
 ### New
 - Emote wheel: hold the middle mouse button, move the mouse towards an emote and release. A short tap keeps the wheel open so you can choose with a click.
