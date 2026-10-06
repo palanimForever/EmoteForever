@@ -34,27 +34,22 @@ function ns.GetDefault(key)
 end
 
 -- Performs an emote at the current target (the game picks the target when no name is given).
--- Logs every attempt in EmoteForeverDB.probe.tests, so the result can be checked after /reload.
+-- PerformEmote returns false even when the emote plays (Forever beta, 2026-10), so the return value
+-- is only logged, not shown. Every attempt goes to EmoteForeverDB.probe.tests (readable after /reload).
 function ns.PerformEmote(token, source)
     local ok, result = pcall(C_ChatInfo.PerformEmote, token)
-    local tests = EmoteForeverDB.probe.tests
-    table.insert(tests, {
+    table.insert(EmoteForeverDB.probe.tests, {
         time = date("%H:%M:%S"),
         token = token,
         source = source,
         ok = ok,
-        result = ok and result or tostring(result),
+        result = tostring(result),
         inCombat = InCombatLockdown(),
-        chatLockdown = C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown() or nil,
+        chatLockdown = tostring(C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()),
     })
-
-    local status
     if not ok then
-        status = L.testError:format(tostring(result))
-    else
-        status = result and L.testSuccess or L.testFailed
+        ns.Print(L.testResult:format(ns.Emotes.GetLabel(token), L.testError:format(tostring(result))))
     end
-    ns.Print(L.testResult:format(ns.Emotes.GetLabel(token), status))
 end
 
 local frame = CreateFrame("Frame")
