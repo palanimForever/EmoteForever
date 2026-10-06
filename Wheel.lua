@@ -30,16 +30,18 @@ local PLATE_BORDER_COLOR = { 0.6, 0.5, 0.3 }
 
 local DISC_SIZE = 300
 local DISC_ALPHA = 0.6
-local TEXT_OFFSET = 140 -- emote and target name below the wheel center
+-- Text below the wheel at fixed positions (from the wheel center), so nothing moves when the name changes.
+local NAME_OFFSET = 140 -- top of the emote name
+local TARGET_OFFSET = 184 -- middle of the target line
 
 -- Center: the player's portrait (you perform the emote) in a bronze ring like Forever's unit frames.
--- When an emote is selected, the square corner of the player frame fades in and swings towards it.
+-- When an emote is selected, the ring with the square corner of the player frame fades in and turns to it.
 local CENTER_SIZE = 120 -- ring canvas; the ring itself is smaller to leave room for the corner
 local PORTRAIT_SIZE = 70 -- fills the ring's inner opening (see ring.py in the design folder)
 
--- Pointer motion: a damped spring, so the corner glides over and settles with a slight overshoot.
-local SPRING_FREQUENCY = 22 -- rad/s; higher = faster
-local SPRING_DAMPING = 0.55 -- below 1 overshoots a little
+-- Pointer motion: a critically damped spring, so the corner glides over and stops without overshooting.
+local SPRING_FREQUENCY = 20 -- rad/s; higher = faster
+local SPRING_DAMPING = 1 -- 1 = fastest without overshoot; below 1 would swing past the goal
 local MAX_STEP = 0.05 -- seconds; longer frames are split up so the spring stays stable
 local POINTER_FADE_SPEED = 8 -- alpha per second when the corner appears or disappears
 
@@ -172,6 +174,7 @@ local function AnimatePointer(elapsed)
     local frame = Wheel.frame
     frame.pointerRing:SetRotation(pointer.angle - math.pi / 2) -- the corner points up in the texture
     frame.pointerRing:SetAlpha(pointer.alpha)
+    frame.roundRing:SetAlpha(1 - pointer.alpha)
 end
 
 -- Selection from the mouse direction relative to the wheel center.
@@ -229,9 +232,9 @@ function Wheel:Init()
 
 
     frame.name = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.name:SetPoint("TOP", frame, "CENTER", 0, -TEXT_OFFSET)
+    frame.name:SetPoint("TOP", frame, "CENTER", 0, -NAME_OFFSET)
     frame.target = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    frame.target:SetPoint("TOP", frame.name, "BOTTOM", 0, -10)
+    frame.target:SetPoint("CENTER", frame, "CENTER", 0, -TARGET_OFFSET)
     -- Portrait left of the (centered) name; anchored instead of measured, the name may be a secret value.
     frame.targetPortrait = frame:CreateTexture(nil, "ARTWORK")
     frame.targetPortrait:SetSize(TARGET_PORTRAIT_SIZE, TARGET_PORTRAIT_SIZE)
@@ -244,11 +247,11 @@ function Wheel:Init()
     frame.portrait = frame:CreateTexture(nil, "ARTWORK")
     frame.portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
     frame.portrait:SetPoint("CENTER")
-    -- Round ring always; the pointer ring lies on top and only adds the corner where it differs.
-    local ring = frame:CreateTexture(nil, "OVERLAY", nil, 1)
-    ring:SetSize(CENTER_SIZE, CENTER_SIZE)
-    ring:SetPoint("CENTER")
-    ring:SetTexture(TEXTURE_RING)
+    -- Round ring and pointer ring crossfade (the round arc would show inside the corner otherwise).
+    frame.roundRing = frame:CreateTexture(nil, "OVERLAY", nil, 1)
+    frame.roundRing:SetSize(CENTER_SIZE, CENTER_SIZE)
+    frame.roundRing:SetPoint("CENTER")
+    frame.roundRing:SetTexture(TEXTURE_RING)
     frame.pointerRing = frame:CreateTexture(nil, "OVERLAY", nil, 2)
     frame.pointerRing:SetSize(CENTER_SIZE, CENTER_SIZE)
     frame.pointerRing:SetPoint("CENTER")
