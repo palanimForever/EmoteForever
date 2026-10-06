@@ -30,13 +30,18 @@ local PLATE_BORDER_COLOR = { 0.6, 0.5, 0.3 }
 
 local DISC_SIZE = 300
 local DISC_ALPHA = 0.6
-local POINTER_RADIUS = 34
-local POINTER_SIZE = 26
+local TEXT_OFFSET = 140 -- emote and target name below the wheel center
+
+-- Center: bronze ring like Forever's unit frames, with the target portrait inside. When an emote is
+-- selected, the ring gets the square corner of the player frame and turns to point at it.
+local CENTER_SIZE = 120 -- ring canvas; the ring itself is smaller to leave room for the corner
+local PORTRAIT_SIZE = 70 -- fills the ring's inner opening (see ring.py in the design folder)
 
 local TEXTURE_BORDER = "Interface\\Minimap\\MiniMap-TrackingBorder"
 local TEXTURE_BACKGROUND = "Interface\\Minimap\\UI-Minimap-Background"
 local TEXTURE_HIGHLIGHT = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
-local TEXTURE_POINTER = "Interface\\Minimap\\MinimapArrow"
+local TEXTURE_RING = "Interface\\AddOns\\" .. addonName .. "\\Media\\ring"
+local TEXTURE_RING_POINTER = "Interface\\AddOns\\" .. addonName .. "\\Media\\ring-pointer" -- corner up
 local TEXTURE_DISC = "Interface\\AddOns\\" .. addonName .. "\\Media\\disc" -- soft round backdrop, white
 
 local PLATE_BACKDROP = {
@@ -128,13 +133,12 @@ local function SetSelected(index)
         ApplySlotStyle(slots[index], true)
         frame.name:SetText(ns.Emotes.GetLabel(slots[index].token))
         local angle = SlotAngle(index, #EmoteForeverDB.wheel)
-        frame.pointer:SetRotation(angle - math.pi / 2) -- the arrow texture points up
-        frame.pointer:ClearAllPoints()
-        frame.pointer:SetPoint("CENTER", POINTER_RADIUS * math.cos(angle), POINTER_RADIUS * math.sin(angle))
-        frame.pointer:Show()
+        frame.ring:SetTexture(TEXTURE_RING_POINTER)
+        frame.ring:SetRotation(angle - math.pi / 2)
     else
         frame.name:SetText("")
-        frame.pointer:Hide()
+        frame.ring:SetTexture(TEXTURE_RING)
+        frame.ring:SetRotation(0)
     end
 end
 
@@ -156,17 +160,22 @@ local function UpdateSelection()
     SetSelected(math.floor(angle / step) + 1)
 end
 
--- Shows the current target under the emote name (or a hint that the emote goes to no one).
+-- Shows the current target: portrait in the center, name under the emote name
+-- (or a hint that the emote goes to no one).
 -- The name can be a secret value for NPCs: no comparisons or string operations, straight to the widget.
 local function UpdateTarget()
+    local frame = Wheel.frame
     local name = UnitName("target")
-    if issecretvalue(name) or name ~= nil then
-        Wheel.frame.target:SetText(name)
-        Wheel.frame.target:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
+    local hasTarget = issecretvalue(name) or name ~= nil
+    if hasTarget then
+        frame.target:SetText(name)
+        frame.target:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
+        SetPortraitTexture(frame.portrait, "target") -- round by default (Blizzard mask)
     else
-        Wheel.frame.target:SetText(L.wheelNoTarget)
-        Wheel.frame.target:SetTextColor(GRAY_FONT_COLOR:GetRGB())
+        frame.target:SetText(L.wheelNoTarget)
+        frame.target:SetTextColor(GRAY_FONT_COLOR:GetRGB())
     end
+    frame.portrait:SetShown(hasTarget)
 end
 
 function Wheel:Init()
@@ -181,15 +190,19 @@ function Wheel:Init()
     disc:SetAllPoints()
     disc:SetVertexColor(0, 0, 0, DISC_ALPHA)
 
-    frame.pointer = frame:CreateTexture(nil, "ARTWORK")
-    frame.pointer:SetTexture(TEXTURE_POINTER)
-    frame.pointer:SetSize(POINTER_SIZE, POINTER_SIZE)
-    frame.pointer:SetVertexColor(NORMAL_FONT_COLOR:GetRGB())
 
     frame.name = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.name:SetPoint("BOTTOM", frame, "CENTER", 0, 2)
+    frame.name:SetPoint("TOP", frame, "CENTER", 0, -TEXT_OFFSET)
     frame.target = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frame.target:SetPoint("TOP", frame, "CENTER", 0, -2)
+    frame.target:SetPoint("TOP", frame.name, "BOTTOM", 0, -2)
+
+    frame.portrait = frame:CreateTexture(nil, "ARTWORK")
+    frame.portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
+    frame.portrait:SetPoint("CENTER")
+    frame.ring = frame:CreateTexture(nil, "OVERLAY")
+    frame.ring:SetSize(CENTER_SIZE, CENTER_SIZE)
+    frame.ring:SetPoint("CENTER")
+    frame.ring:SetTexture(TEXTURE_RING)
 
     local fadeIn = frame:CreateAnimationGroup()
     local alpha = fadeIn:CreateAnimation("Alpha")
@@ -209,7 +222,7 @@ function Wheel:Init()
         elseif event == "GLOBAL_MOUSE_UP" and mode == "hold" and button == "MiddleButton" then
             -- Safety net: the binding's key-up can be lost (e.g. while the game window loses focus).
             Wheel:Release()
-        elseif event == "PLAYER_TARGET_CHANGED" then
+        elseif event == "PLAYER_TARGET_CHANGED" or event == "UNIT_PORTRAIT_UPDATE" then
             UpdateTarget()
         end
     end)
@@ -264,6 +277,7 @@ function Wheel:Open(asClickMode)
     frame:RegisterEvent("GLOBAL_MOUSE_DOWN")
     frame:RegisterEvent("GLOBAL_MOUSE_UP")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target")
     frame:Show()
     frame.fadeIn:Play()
 end
