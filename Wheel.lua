@@ -32,10 +32,20 @@ local DISC_SIZE = 300
 local DISC_ALPHA = 0.6
 local TEXT_OFFSET = 140 -- emote and target name below the wheel center
 
--- Center: bronze ring like Forever's unit frames, with the target portrait inside. When an emote is
--- selected, the ring gets the square corner of the player frame and turns to point at it.
+-- Center: the player's portrait (you perform the emote) in a bronze ring like Forever's unit frames.
+-- When an emote is selected, the square corner of the player frame fades in and swings towards it.
 local CENTER_SIZE = 120 -- ring canvas; the ring itself is smaller to leave room for the corner
 local PORTRAIT_SIZE = 70 -- fills the ring's inner opening (see ring.py in the design folder)
+
+-- Pointer motion: a damped spring, so the corner glides over and settles with a slight overshoot.
+local SPRING_FREQUENCY = 22 -- rad/s; higher = faster
+local SPRING_DAMPING = 0.55 -- below 1 overshoots a little
+local MAX_STEP = 0.05 -- seconds; longer frames are split up so the spring stays stable
+local POINTER_FADE_SPEED = 8 -- alpha per second when the corner appears or disappears
+
+-- Target below the emote name: small portrait in the same bronze ring, name next to it.
+local TARGET_RING_SIZE = 48
+local TARGET_PORTRAIT_SIZE = 28
 
 local TEXTURE_BORDER = "Interface\\Minimap\\MiniMap-TrackingBorder"
 local TEXTURE_BACKGROUND = "Interface\\Minimap\\UI-Minimap-Background"
@@ -55,6 +65,7 @@ local slots = {}
 local selected -- index of the selected slot or nil
 local mode -- nil (closed) | "hold" | "click"
 local openedAt, closedAt = 0, 0
+local pointer = { angle = 0, velocity = 0, goal = 0, alpha = 0, alphaGoal = 0 }
 
 -- Angle of slot i in radians, slot 1 at the top, clockwise.
 local function SlotAngle(i, count)
@@ -132,14 +143,35 @@ local function SetSelected(index)
     if index then
         ApplySlotStyle(slots[index], true)
         frame.name:SetText(ns.Emotes.GetLabel(slots[index].token))
-        local angle = SlotAngle(index, #EmoteForeverDB.wheel)
-        frame.ring:SetTexture(TEXTURE_RING_POINTER)
-        frame.ring:SetRotation(angle - math.pi / 2)
+        pointer.goal = SlotAngle(index, #EmoteForeverDB.wheel)
+        if pointer.alpha == 0 then -- appearing: start at the goal instead of swinging in from the old angle
+            pointer.angle, pointer.velocity = pointer.goal, 0
+        end
+        pointer.alphaGoal = 1
     else
         frame.name:SetText("")
-        frame.ring:SetTexture(TEXTURE_RING)
-        frame.ring:SetRotation(0)
+        pointer.alphaGoal = 0
     end
+end
+
+-- Moves the pointer ring towards its goal (spring) and fades its corner in or out.
+local function AnimatePointer(elapsed)
+    local omega = SPRING_FREQUENCY
+    while elapsed > 0 do
+        local dt = math.min(elapsed, MAX_STEP)
+        elapsed = elapsed - dt
+        -- Shortest way around: the difference wrapped into -pi .. pi.
+        local diff = (pointer.angle - pointer.goal + math.pi) % (2 * math.pi) - math.pi
+        local acceleration = -omega * omega * diff - 2 * SPRING_DAMPING * omega * pointer.velocity
+        pointer.velocity = pointer.velocity + acceleration * dt
+        pointer.angle = pointer.angle + pointer.velocity * dt
+
+        local step = POINTER_FADE_SPEED * dt
+        pointer.alpha = math.max(math.min(pointer.alpha + step, pointer.alphaGoal), pointer.alpha - step)
+    end
+    local frame = Wheel.frame
+    frame.pointerRing:SetRotation(pointer.angle - math.pi / 2) -- the corner points up in the texture
+    frame.pointerRing:SetAlpha(pointer.alpha)
 end
 
 -- Selection from the mouse direction relative to the wheel center.
@@ -160,7 +192,7 @@ local function UpdateSelection()
     SetSelected(math.floor(angle / step) + 1)
 end
 
--- Shows the current target: portrait in the center, name under the emote name
+-- Shows the current target under the emote name: small portrait and name
 -- (or a hint that the emote goes to no one).
 -- The name can be a secret value for NPCs: no comparisons or string operations, straight to the widget.
 local function UpdateTarget()
@@ -170,12 +202,17 @@ local function UpdateTarget()
     if hasTarget then
         frame.target:SetText(name)
         frame.target:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
-        SetPortraitTexture(frame.portrait, "target") -- round by default (Blizzard mask)
+        SetPortraitTexture(frame.targetPortrait, "target") -- round by default (Blizzard mask)
     else
         frame.target:SetText(L.wheelNoTarget)
         frame.target:SetTextColor(GRAY_FONT_COLOR:GetRGB())
     end
-    frame.portrait:SetShown(hasTarget)
+    frame.targetPortrait:SetShown(hasTarget)
+    frame.targetRing:SetShown(hasTarget)
+end
+
+local function UpdatePlayerPortrait()
+    SetPortraitTexture(Wheel.frame.portrait, "player")
 end
 
 function Wheel:Init()
@@ -193,16 +230,30 @@ function Wheel:Init()
 
     frame.name = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     frame.name:SetPoint("TOP", frame, "CENTER", 0, -TEXT_OFFSET)
-    frame.target = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frame.target:SetPoint("TOP", frame.name, "BOTTOM", 0, -2)
+    frame.target = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    frame.target:SetPoint("TOP", frame.name, "BOTTOM", 0, -10)
+    -- Portrait left of the (centered) name; anchored instead of measured, the name may be a secret value.
+    frame.targetPortrait = frame:CreateTexture(nil, "ARTWORK")
+    frame.targetPortrait:SetSize(TARGET_PORTRAIT_SIZE, TARGET_PORTRAIT_SIZE)
+    frame.targetPortrait:SetPoint("RIGHT", frame.target, "LEFT", -6, 0)
+    frame.targetRing = frame:CreateTexture(nil, "OVERLAY")
+    frame.targetRing:SetTexture(TEXTURE_RING)
+    frame.targetRing:SetSize(TARGET_RING_SIZE, TARGET_RING_SIZE)
+    frame.targetRing:SetPoint("CENTER", frame.targetPortrait)
 
     frame.portrait = frame:CreateTexture(nil, "ARTWORK")
     frame.portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
     frame.portrait:SetPoint("CENTER")
-    frame.ring = frame:CreateTexture(nil, "OVERLAY")
-    frame.ring:SetSize(CENTER_SIZE, CENTER_SIZE)
-    frame.ring:SetPoint("CENTER")
-    frame.ring:SetTexture(TEXTURE_RING)
+    -- Round ring always; the pointer ring lies on top and only adds the corner where it differs.
+    local ring = frame:CreateTexture(nil, "OVERLAY", nil, 1)
+    ring:SetSize(CENTER_SIZE, CENTER_SIZE)
+    ring:SetPoint("CENTER")
+    ring:SetTexture(TEXTURE_RING)
+    frame.pointerRing = frame:CreateTexture(nil, "OVERLAY", nil, 2)
+    frame.pointerRing:SetSize(CENTER_SIZE, CENTER_SIZE)
+    frame.pointerRing:SetPoint("CENTER")
+    frame.pointerRing:SetTexture(TEXTURE_RING_POINTER)
+    frame.pointerRing:SetAlpha(0)
 
     local fadeIn = frame:CreateAnimationGroup()
     local alpha = fadeIn:CreateAnimation("Alpha")
@@ -216,17 +267,22 @@ function Wheel:Init()
         if button == "LeftButton" and selected then Wheel.Perform() end
         Wheel:Close()
     end)
-    frame:SetScript("OnEvent", function(_, event, button)
+    frame:SetScript("OnEvent", function(_, event, button) -- button = unit for UNIT_PORTRAIT_UPDATE
         if event == "GLOBAL_MOUSE_DOWN" and mode == "click" and not frame:IsMouseOver() then
             Wheel:Close()
         elseif event == "GLOBAL_MOUSE_UP" and mode == "hold" and button == "MiddleButton" then
             -- Safety net: the binding's key-up can be lost (e.g. while the game window loses focus).
             Wheel:Release()
-        elseif event == "PLAYER_TARGET_CHANGED" or event == "UNIT_PORTRAIT_UPDATE" then
+        elseif event == "PLAYER_TARGET_CHANGED" or (event == "UNIT_PORTRAIT_UPDATE" and button == "target") then
             UpdateTarget()
+        elseif event == "UNIT_PORTRAIT_UPDATE" then
+            UpdatePlayerPortrait()
         end
     end)
-    frame:SetScript("OnUpdate", UpdateSelection) -- only runs while the wheel is shown
+    frame:SetScript("OnUpdate", function(_, elapsed) -- only runs while the wheel is shown
+        UpdateSelection()
+        AnimatePointer(elapsed)
+    end)
 
     self.frame = frame
     self:ApplySettings()
@@ -272,12 +328,15 @@ function Wheel:Open(asClickMode)
     selected = nil
     for i = 1, #EmoteForeverDB.wheel do ApplySlotStyle(slots[i], false) end
     SetSelected(nil)
+    pointer.alpha = 0
+    AnimatePointer(0)
+    UpdatePlayerPortrait()
     UpdateTarget()
     frame:EnableMouse(mode == "click")
     frame:RegisterEvent("GLOBAL_MOUSE_DOWN")
     frame:RegisterEvent("GLOBAL_MOUSE_UP")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
-    frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target")
+    frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "player", "target")
     frame:Show()
     frame.fadeIn:Play()
 end
