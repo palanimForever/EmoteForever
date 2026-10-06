@@ -2,72 +2,73 @@ local addonName, ns = ...
 local L = ns.L
 
 -- Emote catalog: which emotes can be put on the wheel and which icon each one shows.
--- The game has no icons for emotes, so every entry borrows a fitting game icon.
+-- The game has no icons for emotes, so EmoteForever ships its own single-color symbols (Media/Emotes,
+-- white on transparency, tinted in-game). Symbols from game-icons.net (CC BY 3.0), credits in the README.
 -- Tokens and localized slash commands come from Blizzard (EMOTE<i>_TOKEN / EMOTE<i>_CMD1).
 
 local Emotes = {}
 ns.Emotes = Emotes
 
-local ICON_PATH = "Interface\\Icons\\"
+local ICON_PATH = "Interface\\AddOns\\" .. addonName .. "\\Media\\Emotes\\"
 local FALLBACK_ICON = {
-    anim = "INV_Gauntlets_04",
-    speech = "INV_Misc_Note_01",
+    anim = "drama-masks",
+    speech = "chat-bubble",
 }
 
 -- Same lists as Blizzard's chat menu (EmoteList / TextEmoteSpeechList), extended by a few popular emotes.
 -- kind: "anim" = character animation, "speech" = animation with a voice line.
 Emotes.list = {
     -- With animation
-    { token = "WAVE", kind = "anim", icon = "Spell_Holy_SealOfProtection" },
-    { token = "BOW", kind = "anim", icon = "Spell_Holy_Restoration" },
-    { token = "DANCE", kind = "anim", icon = "INV_Misc_Drum_01" },
-    { token = "APPLAUD", kind = "anim", icon = "Spell_Holy_PowerInfusion" },
-    { token = "BEG", kind = "anim", icon = "INV_Misc_Coin_01" },
-    { token = "CHICKEN", kind = "anim", icon = "Spell_Magic_PolymorphChicken" },
-    { token = "CRY", kind = "anim", icon = "Spell_Frost_FrostShock" },
-    { token = "EAT", kind = "anim", icon = "INV_Misc_Food_01" },
-    { token = "FLEX", kind = "anim", icon = "Spell_Nature_Strength" },
-    { token = "KISS", kind = "anim", icon = "Spell_Shadow_SoothingKiss" },
-    { token = "LAUGH", kind = "anim", icon = "Spell_Shadow_Charm" },
-    { token = "POINT", kind = "anim", icon = "Ability_TownWatch" },
-    { token = "ROAR", kind = "anim", icon = "Ability_Druid_DemoralizingRoar" },
-    { token = "RUDE", kind = "anim", icon = "Spell_Shadow_UnholyFrenzy" },
-    { token = "SALUTE", kind = "anim", icon = "Ability_Warrior_BattleShout" },
-    { token = "SHY", kind = "anim", icon = "Ability_Stealth" },
-    { token = "TALK", kind = "anim", icon = "INV_Letter_01" },
-    { token = "STAND", kind = "anim", icon = "Ability_Warrior_DefensiveStance" },
-    { token = "SIT", kind = "anim", icon = "Spell_Nature_Slow" },
-    { token = "SLEEP", kind = "anim", icon = "Spell_Nature_Sleep" },
-    { token = "KNEEL", kind = "anim", icon = "Spell_Holy_PrayerOfHealing" },
-    { token = "LEAN", kind = "anim", icon = "Spell_Nature_Invisibilty" },
-    { token = "HUG", kind = "anim", icon = "INV_Misc_Pelt_Bear_01" },
-    { token = "CLAP", kind = "anim", icon = "Spell_Holy_Heal" },
+    { token = "WAVE", kind = "anim", icon = "palm" },
+    { token = "BOW", kind = "anim", icon = "prayer" },
+    { token = "DANCE", kind = "anim", icon = "acrobatic" },
+    { token = "APPLAUD", kind = "anim", icon = "laurel-crown" },
+    { token = "BEG", kind = "anim", icon = "two-coins" },
+    { token = "CHICKEN", kind = "anim", icon = "chicken" },
+    { token = "CRY", kind = "anim", icon = "tear-tracks" },
+    { token = "EAT", kind = "anim", icon = "chicken-leg" },
+    { token = "FLEX", kind = "anim", icon = "biceps" },
+    { token = "KISS", kind = "anim", icon = "lips" },
+    { token = "LAUGH", kind = "anim", icon = "jester-hat" },
+    { token = "POINT", kind = "anim", icon = "pointing" },
+    { token = "ROAR", kind = "anim", icon = "shouting" },
+    { token = "RUDE", kind = "anim", icon = "fist" },
+    { token = "SALUTE", kind = "anim", icon = "knight-banner" },
+    { token = "SHY", kind = "anim", icon = "hood" },
+    { token = "TALK", kind = "anim", icon = "talk" },
+    { token = "STAND", kind = "anim", icon = "person" },
+    { token = "SIT", kind = "anim", icon = "meditation" },
+    { token = "SLEEP", kind = "anim", icon = "night-sleep" },
+    { token = "KNEEL", kind = "anim", icon = "kneeling" },
+    { token = "LEAN", kind = "anim", icon = "brick-wall" },
+    { token = "HUG", kind = "anim", icon = "lovers" },
+    { token = "CLAP", kind = "anim", icon = "high-five" },
 
     -- With voice
-    { token = "HELPME", kind = "speech", icon = "Spell_Holy_SealOfSacrifice" },
-    { token = "INCOMING", kind = "speech", icon = "Ability_Hunter_EagleEye" },
-    { token = "CHARGE", kind = "speech", icon = "Ability_Warrior_Charge" },
-    { token = "FLEE", kind = "speech", icon = "Ability_Rogue_Sprint" },
-    { token = "ATTACKMYTARGET", kind = "speech", icon = "Ability_Hunter_SniperShot" },
-    { token = "OOM", kind = "speech", icon = "Spell_Shadow_ManaBurn" },
-    { token = "FOLLOW", kind = "speech", icon = "Ability_Tracking" },
-    { token = "WAIT", kind = "speech", icon = "INV_Misc_PocketWatch_01" },
-    { token = "HEALME", kind = "speech", icon = "Spell_Holy_FlashHeal" },
-    { token = "CHEER", kind = "speech", icon = "INV_Misc_MissileSmall_Red" },
-    { token = "OPENFIRE", kind = "speech", icon = "Spell_Fire_FireBolt02" },
-    { token = "RASP", kind = "speech", icon = "Spell_Shadow_CurseOfTounges" },
-    { token = "HELLO", kind = "speech", icon = "INV_Gauntlets_05" },
-    { token = "BYE", kind = "speech", icon = "INV_Misc_Rune_01" },
-    { token = "NOD", kind = "speech", icon = "Spell_Holy_SealOfWisdom" },
-    { token = "NO", kind = "speech", icon = "Ability_Warrior_ShieldBash" },
-    { token = "THANK", kind = "speech", icon = "Spell_Holy_SealOfSalvation" },
-    { token = "WELCOME", kind = "speech", icon = "INV_Drink_05" },
-    { token = "CONGRATULATE", kind = "speech", icon = "INV_Holiday_Christmas_Present_01" },
-    { token = "FLIRT", kind = "speech", icon = "INV_ValentinesCandy" },
-    { token = "JOKE", kind = "speech", icon = "INV_Misc_Toy_05" },
-    { token = "TRAIN", kind = "speech", icon = "INV_Misc_Gear_01" },
-    { token = "FORTHEALLIANCE", kind = "speech", icon = "INV_BannerPVP_02", faction = "Alliance" },
-    { token = "FORTHEHORDE", kind = "speech", icon = "INV_BannerPVP_01", faction = "Horde" },
+    { token = "HELPME", kind = "speech", icon = "help" },
+    { token = "INCOMING", kind = "speech", icon = "ringing-bell" },
+    { token = "CHARGE", kind = "speech", icon = "hunting-horn" },
+    { token = "FLEE", kind = "speech", icon = "run" },
+    { token = "ATTACKMYTARGET", kind = "speech", icon = "crosshair" },
+    { token = "OOM", kind = "speech", icon = "round-potion" },
+    { token = "FOLLOW", kind = "speech", icon = "footprint" },
+    { token = "WAIT", kind = "speech", icon = "hourglass" },
+    { token = "HEALME", kind = "speech", icon = "health-potion" },
+    { token = "CHEER", kind = "speech", icon = "party-popper" },
+    { token = "OPENFIRE", kind = "speech", icon = "cannon" },
+    { token = "RASP", kind = "speech", icon = "tongue" },
+    { token = "HELLO", kind = "speech", icon = "open-palm" },
+    { token = "BYE", kind = "speech", icon = "exit-door" },
+    { token = "NOD", kind = "speech", icon = "thumb-up" },
+    { token = "NO", kind = "speech", icon = "thumb-down" },
+    { token = "THANK", kind = "speech", icon = "shaking-hands" },
+    { token = "WELCOME", kind = "speech", icon = "beer-stein" },
+    { token = "CONGRATULATE", kind = "speech", icon = "present" },
+    { token = "FLIRT", kind = "speech", icon = "rose" },
+    { token = "JOKE", kind = "speech", icon = "card-joker" },
+    { token = "TRAIN", kind = "speech", icon = "steam-locomotive" },
+    { token = "FORTHEALLIANCE", kind = "speech", icon = "lion", faction = "Alliance" },
+    { token = "FORTHEHORDE", kind = "speech", icon = "wolf-head", faction = "Horde" },
 }
 
 local byToken = {}
@@ -127,24 +128,19 @@ function Emotes.FindToken(input)
     end
 end
 
--- Developer check: which emotes of our list does the game know, and which icon files exist?
+-- Developer check: which emotes of our list does the game know?
 -- Stored in EmoteForeverDB.probe (readable after /reload).
 function Emotes.Probe()
     local probe = EmoteForeverDB.probe
     probe.time = date("%Y-%m-%d %H:%M:%S")
     probe.maxEmoteIndex = MAXEMOTEINDEX
-    probe.unknownTokens, probe.missingIcons, probe.labels = {}, {}, {}
+    probe.unknownTokens, probe.labels = {}, {}
+    probe.missingIcons = nil
 
-    local function CheckIcon(icon)
-        local fileID = GetFileIDFromPath(ICON_PATH .. icon)
-        if not fileID or fileID == 0 then table.insert(probe.missingIcons, icon) end
-    end
     for _, emote in ipairs(Emotes.list) do
         if not Emotes.Exists(emote.token) then table.insert(probe.unknownTokens, emote.token) end
         probe.labels[emote.token] = Emotes.GetLabel(emote.token)
-        CheckIcon(emote.icon)
     end
-    for _, icon in pairs(FALLBACK_ICON) do CheckIcon(icon) end
 
     -- All emotes the game knows, as a base for the full selection list later.
     probe.allTokens = {}
@@ -152,5 +148,5 @@ function Emotes.Probe()
         probe.allTokens[token] = _G["EMOTE" .. i .. "_CMD1"] or false
     end
 
-    ns.Print(L.probeDone:format(#Emotes.list, #probe.unknownTokens, #probe.missingIcons))
+    ns.Print(L.probeDone:format(#Emotes.list, #probe.unknownTokens))
 end

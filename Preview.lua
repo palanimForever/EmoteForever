@@ -1,7 +1,8 @@
 local addonName, ns = ...
 local L = ns.L
 
--- Developer preview: all emotes of the catalog as an icon grid, to review the icon choice.
+-- Developer preview: all emotes of the catalog as a symbol grid, to review the symbol choice.
+-- Gold label = part of the default wheel, red label = emote unknown to the game.
 -- Clicking an icon performs the emote (tests C_ChatInfo.PerformEmote from a mouse click).
 
 local Preview = {}
@@ -14,7 +15,7 @@ local CELL_HEIGHT = 62
 local PADDING = 16
 local HEADER_HEIGHT = 22
 local TITLE_HEIGHT = 30
-local DEFAULT_BORDER_COLOR = { 1, 0.82, 0 } -- gold: part of the default wheel
+local SLOT_INSET = 4 -- symbol padding inside the dark slot
 
 local function IsOnDefaultWheel(token)
     for _, wheelToken in ipairs(ns.defaults.wheel) do
@@ -25,10 +26,11 @@ end
 
 local function OnEnter(button)
     local token = button.token
+    button.icon:SetVertexColor(HIGHLIGHT_FONT_COLOR:GetRGB())
     GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
     GameTooltip:SetText(ns.Emotes.GetLabel(token))
     GameTooltip:AddLine(token, GRAY_FONT_COLOR:GetRGB())
-    GameTooltip:AddLine(ns.Emotes.GetIcon(token), GRAY_FONT_COLOR:GetRGB())
+    GameTooltip:AddLine(ns.Emotes.Get(token).icon, GRAY_FONT_COLOR:GetRGB())
     if IsOnDefaultWheel(token) then
         GameTooltip:AddLine(L.previewDefaultWheel, NORMAL_FONT_COLOR:GetRGB())
     end
@@ -42,30 +44,34 @@ local function CreateIconButton(parent, emote)
     button:SetSize(ICON_SIZE, ICON_SIZE)
     button.token = emote.token
 
-    local icon = button:CreateTexture(nil, "ARTWORK")
-    icon:SetAllPoints()
-    icon:SetTexture(ns.Emotes.GetIcon(emote.token))
-    button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-    button:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+    local slot = button:CreateTexture(nil, "BACKGROUND")
+    slot:SetAllPoints()
+    slot:SetColorTexture(0, 0, 0, 0.5)
 
-    if IsOnDefaultWheel(emote.token) then
-        local border = button:CreateTexture(nil, "OVERLAY")
-        border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-        border:SetBlendMode("ADD")
-        border:SetVertexColor(unpack(DEFAULT_BORDER_COLOR))
-        border:SetPoint("CENTER")
-        border:SetSize(ICON_SIZE * 1.8, ICON_SIZE * 1.8)
-    end
+    -- White symbol, tinted gold like Blizzard's headings; white while hovered.
+    local icon = button:CreateTexture(nil, "ARTWORK")
+    icon:SetPoint("TOPLEFT", SLOT_INSET, -SLOT_INSET)
+    icon:SetPoint("BOTTOMRIGHT", -SLOT_INSET, SLOT_INSET)
+    icon:SetTexture(ns.Emotes.GetIcon(emote.token))
+    icon:SetVertexColor(NORMAL_FONT_COLOR:GetRGB())
+    button.icon = icon
 
     local label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("TOP", button, "BOTTOM", 0, -3)
     label:SetWidth(CELL_WIDTH - 4)
     label:SetWordWrap(false)
     label:SetText(ns.Emotes.GetLabel(emote.token))
-    if not ns.Emotes.Exists(emote.token) then label:SetTextColor(1, 0.2, 0.2) end
+    if not ns.Emotes.Exists(emote.token) then
+        label:SetTextColor(1, 0.2, 0.2)
+    elseif IsOnDefaultWheel(emote.token) then
+        label:SetTextColor(NORMAL_FONT_COLOR:GetRGB())
+    end
 
     button:SetScript("OnEnter", OnEnter)
-    button:SetScript("OnLeave", GameTooltip_Hide)
+    button:SetScript("OnLeave", function(self)
+        self.icon:SetVertexColor(NORMAL_FONT_COLOR:GetRGB())
+        GameTooltip_Hide()
+    end)
     button:SetScript("OnClick", function() ns.PerformEmote(emote.token, "click") end)
     return button
 end

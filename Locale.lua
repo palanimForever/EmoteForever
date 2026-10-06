@@ -9,11 +9,11 @@ local L = {
     helpPreview = "show all emotes with their icons (click to perform)",
     helpTest = "perform an emote, e.g. /emf test wave",
     helpTestDelayed = "same, but one second later (no key press)",
-    helpProbe = "check emotes and icons, results in EmoteForeverDB.probe after /reload",
+    helpProbe = "check which emotes the game knows, results in EmoteForeverDB.probe after /reload",
     testResult = "%s: %s",
     testError = "error: %s",
     unknownEmote = "Unknown emote: %s",
-    probeDone = "%d emotes checked, %d unknown, %d icons missing. Details after /reload in EmoteForeverDB.probe.",
+    probeDone = "%d emotes checked, %d unknown. Details after /reload in EmoteForeverDB.probe.",
 
     -- Preview window
     previewTitle = "EmoteForever – emotes and icons",
@@ -21,7 +21,6 @@ local L = {
     previewSpeech = "With voice",
     previewClickHint = "Click: perform the emote",
     previewDefaultWheel = "Part of the default wheel",
-    previewFallbackIcon = "Placeholder icon",
 }
 
 local translations = {}
@@ -30,17 +29,16 @@ translations.deDE = {
     helpPreview = "alle Emotes mit Icons anzeigen (Klick führt aus)",
     helpTest = "Emote ausführen, z. B. /emf test wave",
     helpTestDelayed = "dasselbe, aber eine Sekunde später (ohne Tastendruck)",
-    helpProbe = "Emotes und Icons prüfen, Ergebnis nach /reload in EmoteForeverDB.probe",
+    helpProbe = "prüfen, welche Emotes das Spiel kennt, Ergebnis nach /reload in EmoteForeverDB.probe",
     testError = "Fehler: %s",
     unknownEmote = "Unbekanntes Emote: %s",
-    probeDone = "%d Emotes geprüft, %d unbekannt, %d Icons fehlen. Details nach /reload in EmoteForeverDB.probe.",
+    probeDone = "%d Emotes geprüft, %d unbekannt. Details nach /reload in EmoteForeverDB.probe.",
 
     previewTitle = "EmoteForever – Emotes und Icons",
     previewAnimations = "Mit Animation",
     previewSpeech = "Mit Stimme",
     previewClickHint = "Klick: Emote ausführen",
     previewDefaultWheel = "Teil des Standardrads",
-    previewFallbackIcon = "Platzhalter-Icon",
 }
 
 for key, text in pairs(translations[GetLocale()] or {}) do
