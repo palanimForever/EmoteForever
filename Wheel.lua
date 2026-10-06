@@ -16,17 +16,21 @@ local TAP_TIME = 0.25 -- seconds; a shorter press opens the click mode
 local REOPEN_BLOCK = 0.1 -- seconds; a click outside closes the wheel and must not reopen it via the binding
 local FADE_TIME = 0.08
 
--- Slot in the style of the minimap buttons (LibDBIcon geometry for a 31 px button, scaled up).
-local SLOT_SCALE = 1.5
-local SLOT_SIZE = 31 * SLOT_SCALE
-local SLOT_BORDER_SIZE = 50 * SLOT_SCALE
-local SLOT_BACKGROUND_SIZE = 24 * SLOT_SCALE
-local SLOT_SYMBOL_SIZE = 20 * SLOT_SCALE
+-- Colors: bronze like the ring of Forever's unit frames instead of Blizzard's yellow gold.
+local BRONZE = CreateColor(0.82, 0.58, 0.30)
+local BRONZE_BRIGHT = CreateColor(1, 0.84, 0.60) -- selected slot, emote name
+local BRONZE_GLOW = CreateColor(0.9, 0.55, 0.25) -- additive glow behind the selected symbol
+
+-- Slot: dark round background with the symbol, framed by the same bronze ring as the center.
+local SLOT_SIZE = 46
+local SLOT_RING_SIZE = SLOT_SIZE / 0.7 -- the ring texture's outer edge is at 70 % of its canvas
+local SLOT_BACKGROUND_SIZE = 38 -- fills the ring's inner opening
+local SLOT_SYMBOL_SIZE = 30
 local SELECTED_SCALE = 1.15
 
 local PLATE_HEIGHT = 26
 local PLATE_PADDING = 14
-local PLATE_BORDER_COLOR = { 0.6, 0.5, 0.3 }
+local PLATE_BORDER_COLOR = { 0.55, 0.38, 0.18 }
 
 local DISC_SIZE = 300
 local DISC_ALPHA = 0.6
@@ -49,7 +53,6 @@ local POINTER_FADE_SPEED = 8 -- alpha per second when the corner appears or disa
 local TARGET_RING_SIZE = 48
 local TARGET_PORTRAIT_SIZE = 28
 
-local TEXTURE_BORDER = "Interface\\Minimap\\MiniMap-TrackingBorder"
 local TEXTURE_BACKGROUND = "Interface\\Minimap\\UI-Minimap-Background"
 local TEXTURE_HIGHLIGHT = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
 local TEXTURE_RING = "Interface\\AddOns\\" .. addonName .. "\\Media\\ring"
@@ -92,14 +95,15 @@ local function CreateSlot(parent)
     slot.icon:SetSize(SLOT_SYMBOL_SIZE, SLOT_SYMBOL_SIZE)
     slot.icon:SetPoint("CENTER")
 
-    local border = symbol:CreateTexture(nil, "OVERLAY")
-    border:SetTexture(TEXTURE_BORDER)
-    border:SetSize(SLOT_BORDER_SIZE, SLOT_BORDER_SIZE)
-    border:SetPoint("TOPLEFT")
+    local ring = symbol:CreateTexture(nil, "OVERLAY")
+    ring:SetTexture(TEXTURE_RING)
+    ring:SetSize(SLOT_RING_SIZE, SLOT_RING_SIZE)
+    ring:SetPoint("CENTER")
 
     slot.glow = symbol:CreateTexture(nil, "OVERLAY", nil, 1)
     slot.glow:SetTexture(TEXTURE_HIGHLIGHT)
     slot.glow:SetBlendMode("ADD")
+    slot.glow:SetVertexColor(BRONZE_GLOW:GetRGB())
     slot.glow:SetAllPoints()
 
     slot.label = symbol:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -122,17 +126,17 @@ local function ApplySlotStyle(slot, isSelected)
     if style == "symbols" then
         slot.symbolFrame:SetScale(isSelected and SELECTED_SCALE or 1)
         slot.glow:SetShown(isSelected)
-        local color = isSelected and HIGHLIGHT_FONT_COLOR or NORMAL_FONT_COLOR
+        local color = isSelected and BRONZE_BRIGHT or BRONZE
         slot.icon:SetVertexColor(color:GetRGB())
         slot.label:SetTextColor(color:GetRGB())
     else
         slot.plate:SetBackdropColor(0, 0, 0, isSelected and 0.95 or 0.75)
         if isSelected then
-            slot.plate:SetBackdropBorderColor(NORMAL_FONT_COLOR:GetRGB())
-            slot.plate.text:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
+            slot.plate:SetBackdropBorderColor(BRONZE.r, BRONZE.g, BRONZE.b)
+            slot.plate.text:SetTextColor(BRONZE_BRIGHT:GetRGB())
         else
             slot.plate:SetBackdropBorderColor(unpack(PLATE_BORDER_COLOR))
-            slot.plate.text:SetTextColor(NORMAL_FONT_COLOR:GetRGB())
+            slot.plate.text:SetTextColor(BRONZE:GetRGB())
         end
     end
 end
@@ -232,6 +236,7 @@ function Wheel:Init()
 
 
     frame.name = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    frame.name:SetTextColor(BRONZE_BRIGHT:GetRGB())
     frame.name:SetPoint("TOP", frame, "CENTER", 0, -NAME_OFFSET)
     frame.target = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     frame.target:SetPoint("CENTER", frame, "CENTER", 0, -TARGET_OFFSET)
