@@ -5,13 +5,19 @@
 ## Author: Palanim
 ## Category: Chat & Communication
 ## Category-deDE: Chat & Kommunikation
-## IconTexture: Interface\Icons\Spell_Holy_SealOfProtection
+## IconTexture: Interface\AddOns\EmoteForever\Media\icon
 ## Version: @project-version@
 ## X-Website: https://github.com/palanimForever/EmoteForever
 ## SavedVariables: EmoteForeverDB
+## OptionalDeps: LibDBIcon-1.0
+
+embeds.xml
 
 Locale.lua
 Core.lua
 Emotes.lua
 Wheel.lua
 Preview.lua
+MinimapButton.lua
+Editor.lua
+Options.lua

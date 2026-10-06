@@ -6,6 +6,9 @@ local L = ns.L
 -- Click mode: a short tap keeps the wheel open; click to perform, click outside to close.
 -- The selection follows the direction from the wheel center, so slots never need the mouse;
 -- in hold mode the wheel ignores the mouse completely, so the key release reaches the binding.
+--
+-- The look (disc, slots, portrait, pointer) is a reusable view: Wheel.CreateView builds it for the
+-- wheel in the world and for the preview in the editor.
 
 local Wheel = {}
 ns.Wheel = Wheel
@@ -20,6 +23,7 @@ local FADE_TIME = 0.08
 local BRONZE = CreateColor(0.82, 0.58, 0.30)
 local BRONZE_BRIGHT = CreateColor(1, 0.84, 0.60) -- selected slot, emote name
 local BRONZE_GLOW = CreateColor(0.9, 0.55, 0.25) -- additive glow behind the selected symbol
+ns.BRONZE, ns.BRONZE_BRIGHT = BRONZE, BRONZE_BRIGHT
 
 -- Slot: dark round background with the symbol, framed by the same bronze ring as the center.
 local SLOT_SIZE = 46
@@ -58,6 +62,7 @@ local TEXTURE_HIGHLIGHT = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
 local TEXTURE_RING = "Interface\\AddOns\\" .. addonName .. "\\Media\\ring"
 local TEXTURE_RING_POINTER = "Interface\\AddOns\\" .. addonName .. "\\Media\\ring-pointer" -- corner up
 local TEXTURE_DISC = "Interface\\AddOns\\" .. addonName .. "\\Media\\disc" -- soft round backdrop, white
+ns.TEXTURE_RING = TEXTURE_RING
 
 local PLATE_BACKDROP = {
     bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -66,19 +71,23 @@ local PLATE_BACKDROP = {
     insets = { left = 3, right = 3, top = 3, bottom = 3 },
 }
 
-local slots = {}
-local selected -- index of the selected slot or nil
-local mode -- nil (closed) | "hold" | "click"
-local openedAt, closedAt = 0, 0
-local pointer = { angle = 0, velocity = 0, goal = 0, alpha = 0, alphaGoal = 0 }
-
 -- Angle of slot i in radians, slot 1 at the top, clockwise.
 local function SlotAngle(i, count)
     return math.pi / 2 - (i - 1) * 2 * math.pi / count
 end
 
+-- Slot index for a direction (dx, dy from the center), or nil inside the dead zone.
+function Wheel.SlotAt(dx, dy, count)
+    if dx * dx + dy * dy < DEAD_ZONE * DEAD_ZONE then return nil end
+    local step = 2 * math.pi / count
+    -- Clockwise angle from the top, shifted by half a slot so each slot owns the sector around it.
+    local angle = (math.pi / 2 - math.atan2(dy, dx) + step / 2) % (2 * math.pi)
+    return math.floor(angle / step) + 1
+end
+
 local function CreateSlot(parent)
     local slot = CreateFrame("Frame", nil, parent)
+    slot:SetSize(SLOT_SIZE, SLOT_SIZE)
 
     -- Symbol style
     local symbol = CreateFrame("Frame", nil, slot)
@@ -122,8 +131,7 @@ local function CreateSlot(parent)
 end
 
 local function ApplySlotStyle(slot, isSelected)
-    local style = EmoteForeverDB.wheelStyle
-    if style == "symbols" then
+    if EmoteForeverDB.wheelStyle == "symbols" then
         slot.symbolFrame:SetScale(isSelected and SELECTED_SCALE or 1)
         slot.glow:SetShown(isSelected)
         local color = isSelected and BRONZE_BRIGHT or BRONZE
@@ -132,7 +140,7 @@ local function ApplySlotStyle(slot, isSelected)
     else
         slot.plate:SetBackdropColor(0, 0, 0, isSelected and 0.95 or 0.75)
         if isSelected then
-            slot.plate:SetBackdropBorderColor(BRONZE.r, BRONZE.g, BRONZE.b)
+            slot.plate:SetBackdropBorderColor(BRONZE:GetRGB())
             slot.plate.text:SetTextColor(BRONZE_BRIGHT:GetRGB())
         else
             slot.plate:SetBackdropBorderColor(unpack(PLATE_BORDER_COLOR))
@@ -141,27 +149,65 @@ local function ApplySlotStyle(slot, isSelected)
     end
 end
 
-local function SetSelected(index)
-    if index == selected then return end
-    if selected and slots[selected] then ApplySlotStyle(slots[selected], false) end
-    selected = index
-    local frame = Wheel.frame
+-- View: methods mixed into the frame returned by Wheel.CreateView.
+local View = {}
+
+-- Builds the slots for the current wheel and style.
+function View:Layout()
+    local style = EmoteForeverDB.wheelStyle
+    local tokens = EmoteForeverDB.wheel
+    local radius = RADIUS[style]
+    for i, token in ipairs(tokens) do
+        local slot = self.slots[i] or CreateSlot(self)
+        self.slots[i] = slot
+        slot.index, slot.token = i, token
+        local label = ns.Emotes.GetLabel(token)
+        slot.icon:SetTexture(ns.Emotes.GetIcon(token))
+        slot.label:SetText(label)
+        slot.plate.text:SetText(label)
+        slot.plate:SetWidth(slot.plate.text:GetStringWidth() + 2 * PLATE_PADDING)
+        slot.symbolFrame:SetShown(style == "symbols")
+        slot.plate:SetShown(style == "names")
+        local angle = SlotAngle(i, #tokens)
+        slot:ClearAllPoints()
+        slot:SetPoint("CENTER", radius * math.cos(angle), radius * math.sin(angle))
+        slot:Show()
+        ApplySlotStyle(slot, i == self.selected)
+    end
+    for i = #tokens + 1, #self.slots do self.slots[i]:Hide() end
+    if self.selected and self.selected > #tokens then self:SetSelected(nil) end
+    if self.selected then self.pointer.goal = SlotAngle(self.selected, #tokens) end
+end
+
+function View:SetSelected(index)
+    if index == self.selected then return end
+    local previous = self.slots[self.selected]
+    if previous then ApplySlotStyle(previous, false) end
+    self.selected = index
+    local pointer = self.pointer
     if index then
-        ApplySlotStyle(slots[index], true)
-        frame.name:SetText(ns.Emotes.GetLabel(slots[index].token))
+        ApplySlotStyle(self.slots[index], true)
+        if self.name then self.name:SetText(ns.Emotes.GetLabel(self.slots[index].token)) end
         pointer.goal = SlotAngle(index, #EmoteForeverDB.wheel)
         if pointer.alpha == 0 then -- appearing: start at the goal instead of swinging in from the old angle
             pointer.angle, pointer.velocity = pointer.goal, 0
         end
         pointer.alphaGoal = 1
     else
-        frame.name:SetText("")
+        if self.name then self.name:SetText("") end
         pointer.alphaGoal = 0
     end
 end
 
+-- Hides the pointer at once (e.g. when the wheel opens).
+function View:ResetPointer()
+    self.pointer.alpha = 0
+    self:Animate(0)
+end
+
 -- Moves the pointer ring towards its goal (spring) and fades its corner in or out.
-local function AnimatePointer(elapsed)
+function View:Animate(elapsed)
+    local pointer = self.pointer
     local omega = SPRING_FREQUENCY
     while elapsed > 0 do
         local dt = math.min(elapsed, MAX_STEP)
@@ -175,178 +221,160 @@ local function AnimatePointer(elapsed)
         local step = POINTER_FADE_SPEED * dt
         pointer.alpha = math.max(math.min(pointer.alpha + step, pointer.alphaGoal), pointer.alpha - step)
     end
-    local frame = Wheel.frame
-    frame.pointerRing:SetRotation(pointer.angle - math.pi / 2) -- the corner points up in the texture
-    frame.pointerRing:SetAlpha(pointer.alpha)
-    frame.roundRing:SetAlpha(1 - pointer.alpha)
+    self.pointerRing:SetRotation(pointer.angle - math.pi / 2) -- the corner points up in the texture
+    self.pointerRing:SetAlpha(pointer.alpha)
+    self.roundRing:SetAlpha(1 - pointer.alpha)
 end
 
--- Selection from the mouse direction relative to the wheel center.
-local function UpdateSelection()
-    local frame = Wheel.frame
-    local scale = frame:GetEffectiveScale()
-    local x, y = GetCursorPosition()
-    local centerX, centerY = frame:GetCenter()
-    local dx, dy = x / scale - centerX, y / scale - centerY
-    if dx * dx + dy * dy < DEAD_ZONE * DEAD_ZONE then
-        SetSelected(nil)
-        return
-    end
-    local count = #EmoteForeverDB.wheel
-    local step = 2 * math.pi / count
-    -- Clockwise angle from the top, shifted by half a slot so each slot owns the sector around it.
-    local angle = (math.pi / 2 - math.atan2(dy, dx) + step / 2) % (2 * math.pi)
-    SetSelected(math.floor(angle / step) + 1)
+function View:UpdatePlayerPortrait()
+    SetPortraitTexture(self.portrait, "player")
 end
 
 -- Shows the current target under the emote name: small portrait and name
 -- (or a hint that the emote goes to no one).
 -- The name can be a secret value for NPCs: no comparisons or string operations, straight to the widget.
-local function UpdateTarget()
-    local frame = Wheel.frame
+function View:UpdateTarget()
     local name = UnitName("target")
     local hasTarget = issecretvalue(name) or name ~= nil
     if hasTarget then
-        frame.target:SetText(name)
-        frame.target:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
-        SetPortraitTexture(frame.targetPortrait, "target") -- round by default (Blizzard mask)
+        self.target:SetText(name)
+        self.target:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB())
+        SetPortraitTexture(self.targetPortrait, "target") -- round by default (Blizzard mask)
     else
-        frame.target:SetText(L.wheelNoTarget)
-        frame.target:SetTextColor(GRAY_FONT_COLOR:GetRGB())
+        self.target:SetText(L.wheelNoTarget)
+        self.target:SetTextColor(GRAY_FONT_COLOR:GetRGB())
     end
-    frame.targetPortrait:SetShown(hasTarget)
-    frame.targetRing:SetShown(hasTarget)
+    self.targetPortrait:SetShown(hasTarget)
+    self.targetRing:SetShown(hasTarget)
 end
 
-local function UpdatePlayerPortrait()
-    SetPortraitTexture(Wheel.frame.portrait, "player")
-end
+-- withTexts: emote name and target below the wheel (the wheel in the world; the editor has its own).
+function Wheel.CreateView(parent, withTexts)
+    local view = CreateFrame("Frame", nil, parent)
+    Mixin(view, View)
+    view:SetSize(DISC_SIZE, DISC_SIZE)
+    view.slots = {}
+    view.pointer = { angle = 0, velocity = 0, goal = 0, alpha = 0, alphaGoal = 0 }
 
-function Wheel:Init()
-    local frame = CreateFrame("Frame", nil, UIParent)
-    frame:SetSize(DISC_SIZE, DISC_SIZE)
-    frame:SetFrameStrata("DIALOG")
-    frame:SetClampedToScreen(true)
-    frame:Hide()
-
-    local disc = frame:CreateTexture(nil, "BACKGROUND")
+    local disc = view:CreateTexture(nil, "BACKGROUND")
     disc:SetTexture(TEXTURE_DISC)
     disc:SetAllPoints()
     disc:SetVertexColor(0, 0, 0, DISC_ALPHA)
 
-
-    frame.name = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.name:SetTextColor(BRONZE_BRIGHT:GetRGB())
-    frame.name:SetPoint("TOP", frame, "CENTER", 0, -NAME_OFFSET)
-    frame.target = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    frame.target:SetPoint("CENTER", frame, "CENTER", 0, -TARGET_OFFSET)
-    -- Portrait left of the (centered) name; anchored instead of measured, the name may be a secret value.
-    frame.targetPortrait = frame:CreateTexture(nil, "ARTWORK")
-    frame.targetPortrait:SetSize(TARGET_PORTRAIT_SIZE, TARGET_PORTRAIT_SIZE)
-    frame.targetPortrait:SetPoint("RIGHT", frame.target, "LEFT", -6, 0)
-    frame.targetRing = frame:CreateTexture(nil, "OVERLAY")
-    frame.targetRing:SetTexture(TEXTURE_RING)
-    frame.targetRing:SetSize(TARGET_RING_SIZE, TARGET_RING_SIZE)
-    frame.targetRing:SetPoint("CENTER", frame.targetPortrait)
-
-    frame.portrait = frame:CreateTexture(nil, "ARTWORK")
-    frame.portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
-    frame.portrait:SetPoint("CENTER")
+    view.portrait = view:CreateTexture(nil, "ARTWORK")
+    view.portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
+    view.portrait:SetPoint("CENTER")
     -- Round ring and pointer ring crossfade (the round arc would show inside the corner otherwise).
-    frame.roundRing = frame:CreateTexture(nil, "OVERLAY", nil, 1)
-    frame.roundRing:SetSize(CENTER_SIZE, CENTER_SIZE)
-    frame.roundRing:SetPoint("CENTER")
-    frame.roundRing:SetTexture(TEXTURE_RING)
-    frame.pointerRing = frame:CreateTexture(nil, "OVERLAY", nil, 2)
-    frame.pointerRing:SetSize(CENTER_SIZE, CENTER_SIZE)
-    frame.pointerRing:SetPoint("CENTER")
-    frame.pointerRing:SetTexture(TEXTURE_RING_POINTER)
-    frame.pointerRing:SetAlpha(0)
+    view.roundRing = view:CreateTexture(nil, "OVERLAY", nil, 1)
+    view.roundRing:SetSize(CENTER_SIZE, CENTER_SIZE)
+    view.roundRing:SetPoint("CENTER")
+    view.roundRing:SetTexture(TEXTURE_RING)
+    view.pointerRing = view:CreateTexture(nil, "OVERLAY", nil, 2)
+    view.pointerRing:SetSize(CENTER_SIZE, CENTER_SIZE)
+    view.pointerRing:SetPoint("CENTER")
+    view.pointerRing:SetTexture(TEXTURE_RING_POINTER)
+    view.pointerRing:SetAlpha(0)
 
-    local fadeIn = frame:CreateAnimationGroup()
+    if withTexts then
+        view.name = view:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        view.name:SetTextColor(BRONZE_BRIGHT:GetRGB())
+        view.name:SetPoint("TOP", view, "CENTER", 0, -NAME_OFFSET)
+        view.target = view:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        view.target:SetPoint("CENTER", view, "CENTER", 0, -TARGET_OFFSET)
+        -- Portrait left of the (centered) name; anchored instead of measured, the name may be a secret value.
+        view.targetPortrait = view:CreateTexture(nil, "ARTWORK")
+        view.targetPortrait:SetSize(TARGET_PORTRAIT_SIZE, TARGET_PORTRAIT_SIZE)
+        view.targetPortrait:SetPoint("RIGHT", view.target, "LEFT", -6, 0)
+        view.targetRing = view:CreateTexture(nil, "OVERLAY")
+        view.targetRing:SetTexture(TEXTURE_RING)
+        view.targetRing:SetSize(TARGET_RING_SIZE, TARGET_RING_SIZE)
+        view.targetRing:SetPoint("CENTER", view.targetPortrait)
+    end
+
+    view:Layout()
+    return view
+end
+
+-- The wheel in the world ----------------------------------------------------------------------------
+
+local mode -- nil (closed) | "hold" | "click"
+local openedAt, closedAt = 0, 0
+
+-- Selection from the mouse direction relative to the wheel center.
+local function UpdateSelection(view)
+    local scale = view:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    local centerX, centerY = view:GetCenter()
+    view:SetSelected(Wheel.SlotAt(x / scale - centerX, y / scale - centerY, #EmoteForeverDB.wheel))
+end
+
+function Wheel:Init()
+    local view = Wheel.CreateView(UIParent, true)
+    view:SetFrameStrata("DIALOG")
+    view:SetClampedToScreen(true)
+    view:Hide()
+
+    local fadeIn = view:CreateAnimationGroup()
     local alpha = fadeIn:CreateAnimation("Alpha")
     alpha:SetFromAlpha(0)
     alpha:SetToAlpha(1)
     alpha:SetDuration(FADE_TIME)
-    frame.fadeIn = fadeIn
+    view.fadeIn = fadeIn
 
     -- Click mode: a click on the wheel performs the selection; GLOBAL_MOUSE_DOWN closes on clicks elsewhere.
-    frame:SetScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" and selected then Wheel.Perform() end
+    view:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then Wheel.Perform() end
         Wheel:Close()
     end)
-    frame:SetScript("OnEvent", function(_, event, button) -- button = unit for UNIT_PORTRAIT_UPDATE
-        if event == "GLOBAL_MOUSE_DOWN" and mode == "click" and not frame:IsMouseOver() then
+    view:SetScript("OnEvent", function(_, event, button) -- button = unit for UNIT_PORTRAIT_UPDATE
+        if event == "GLOBAL_MOUSE_DOWN" and mode == "click" and not view:IsMouseOver() then
             Wheel:Close()
         elseif event == "GLOBAL_MOUSE_UP" and mode == "hold" and button == "MiddleButton" then
             -- Safety net: the binding's key-up can be lost (e.g. while the game window loses focus).
             Wheel:Release()
         elseif event == "PLAYER_TARGET_CHANGED" or (event == "UNIT_PORTRAIT_UPDATE" and button == "target") then
-            UpdateTarget()
+            view:UpdateTarget()
         elseif event == "UNIT_PORTRAIT_UPDATE" then
-            UpdatePlayerPortrait()
+            view:UpdatePlayerPortrait()
         end
     end)
-    frame:SetScript("OnUpdate", function(_, elapsed) -- only runs while the wheel is shown
-        UpdateSelection()
-        AnimatePointer(elapsed)
+    view:SetScript("OnUpdate", function(_, elapsed) -- only runs while the wheel is shown
+        UpdateSelection(view)
+        view:Animate(elapsed)
     end)
 
-    self.frame = frame
+    self.frame = view
     self:ApplySettings()
 end
 
--- Builds the slots for the current wheel and style.
 function Wheel:ApplySettings()
     if not self.frame then return end
-    local style = EmoteForeverDB.wheelStyle
-    local tokens = EmoteForeverDB.wheel
-    local radius = RADIUS[style]
-    for i, token in ipairs(tokens) do
-        local slot = slots[i] or CreateSlot(self.frame)
-        slots[i] = slot
-        slot.token = token
-        local label = ns.Emotes.GetLabel(token)
-        slot.icon:SetTexture(ns.Emotes.GetIcon(token))
-        slot.label:SetText(label)
-        slot.plate.text:SetText(label)
-        slot.plate:SetWidth(slot.plate.text:GetStringWidth() + 2 * PLATE_PADDING)
-        slot.symbolFrame:SetShown(style == "symbols")
-        slot.plate:SetShown(style == "names")
-        local angle = SlotAngle(i, #tokens)
-        slot:SetSize(SLOT_SIZE, SLOT_SIZE)
-        slot:ClearAllPoints()
-        slot:SetPoint("CENTER", radius * math.cos(angle), radius * math.sin(angle))
-        slot:Show()
-        ApplySlotStyle(slot, false)
-    end
-    for i = #tokens + 1, #slots do slots[i]:Hide() end
+    self.frame:SetScale(EmoteForeverDB.wheelScale / 100)
+    self.frame:Layout()
 end
 
 function Wheel:Open(asClickMode)
     if not self.frame then self:Init() end
-    local frame = self.frame
-    local scale = frame:GetEffectiveScale()
+    if mode then self:Close() end
+    local view = self.frame
+    local scale = view:GetEffectiveScale()
     local x, y = GetCursorPosition()
-    frame:ClearAllPoints()
-    frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x / scale, y / scale)
+    view:ClearAllPoints()
+    view:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x / scale, y / scale)
 
     mode = asClickMode and "click" or "hold"
     openedAt = GetTime()
-    selected = nil
-    for i = 1, #EmoteForeverDB.wheel do ApplySlotStyle(slots[i], false) end
-    SetSelected(nil)
-    pointer.alpha = 0
-    AnimatePointer(0)
-    UpdatePlayerPortrait()
-    UpdateTarget()
-    frame:EnableMouse(mode == "click")
-    frame:RegisterEvent("GLOBAL_MOUSE_DOWN")
-    frame:RegisterEvent("GLOBAL_MOUSE_UP")
-    frame:RegisterEvent("PLAYER_TARGET_CHANGED")
-    frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "player", "target")
-    frame:Show()
-    frame.fadeIn:Play()
+    view:SetSelected(nil)
+    view:ResetPointer()
+    view:UpdatePlayerPortrait()
+    view:UpdateTarget()
+    view:EnableMouse(mode == "click")
+    view:RegisterEvent("GLOBAL_MOUSE_DOWN")
+    view:RegisterEvent("GLOBAL_MOUSE_UP")
+    view:RegisterEvent("PLAYER_TARGET_CHANGED")
+    view:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "player", "target")
+    view:Show()
+    view.fadeIn:Play()
 end
 
 function Wheel:Close()
@@ -359,13 +387,15 @@ function Wheel:Close()
 end
 
 function Wheel.Perform()
-    if selected then ns.PerformEmote(slots[selected].token, "wheel") end
+    local view = Wheel.frame
+    local slot = view and view.slots[view.selected]
+    if slot then ns.PerformEmote(slot.token, "wheel") end
 end
 
 -- Key released in hold mode: perform, or switch to click mode after a short tap.
 function Wheel:Release()
     if mode ~= "hold" then return end
-    if selected then
+    if self.frame.selected then
         Wheel.Perform()
         self:Close()
     elseif GetTime() - openedAt < TAP_TIME then

@@ -112,6 +112,16 @@ function Emotes.GetIcon(token)
     return ICON_PATH .. icon
 end
 
+-- All other emotes the game knows (mostly chat text without animation), sorted by name.
+function Emotes.Others()
+    local others = {}
+    for token in pairs(GetBlizzardIndex()) do
+        if not byToken[token] then table.insert(others, token) end
+    end
+    table.sort(others, function(a, b) return Emotes.GetLabel(a):lower() < Emotes.GetLabel(b):lower() end)
+    return others
+end
+
 function Emotes.IsAvailable(emote)
     return not emote.faction or emote.faction == UnitFactionGroup("player")
 end

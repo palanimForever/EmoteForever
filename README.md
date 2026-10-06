@@ -2,7 +2,15 @@
 
 An emote wheel for World of Warcraft: Forever. Hold a key, flick the mouse towards an emote, release – and your character waves, thanks, dances or cheers at your target.
 
-Work in progress.
+## Features
+
+- **Hold, aim, release:** the wheel opens at your mouse cursor. Move towards an emote and let go – your character waves, thanks, dances or cheers at your target.
+- **Click mode:** tap the key briefly and the wheel stays open; choose with a click.
+- **Your own wheel:** 4 to 12 slots, any emote of the game, searchable list, Shift-click to try an emote out.
+- **Any key:** middle mouse button by default, change it in the settings.
+- **Fits the game:** bronze rings like the unit frames, your portrait in the center, a pointer that glides to your choice.
+
+Open the settings with `/emf` or a left-click on the minimap button.
 
 ## Credits
 
