@@ -21,7 +21,7 @@ local SLOT_SCALE = 1.5
 local SLOT_SIZE = 31 * SLOT_SCALE
 local SLOT_BORDER_SIZE = 50 * SLOT_SCALE
 local SLOT_BACKGROUND_SIZE = 24 * SLOT_SCALE
-local SLOT_SYMBOL_SIZE = 20 * SLOT_SCALE
+local SLOT_SYMBOL_SIZE = 17 * SLOT_SCALE
 local SELECTED_SCALE = 1.15
 
 local PLATE_HEIGHT = 26
@@ -29,7 +29,7 @@ local PLATE_PADDING = 14
 local PLATE_BORDER_COLOR = { 0.6, 0.5, 0.3 }
 
 local DISC_SIZE = 300
-local DISC_ALPHA = 0.55
+local DISC_ALPHA = 0.6
 local POINTER_RADIUS = 34
 local POINTER_SIZE = 26
 
@@ -37,6 +37,7 @@ local TEXTURE_BORDER = "Interface\\Minimap\\MiniMap-TrackingBorder"
 local TEXTURE_BACKGROUND = "Interface\\Minimap\\UI-Minimap-Background"
 local TEXTURE_HIGHLIGHT = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
 local TEXTURE_POINTER = "Interface\\Minimap\\MinimapArrow"
+local TEXTURE_DISC = "Interface\\AddOns\\" .. addonName .. "\\Media\\disc" -- soft round backdrop, white
 
 local PLATE_BACKDROP = {
     bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -176,9 +177,9 @@ function Wheel:Init()
     frame:Hide()
 
     local disc = frame:CreateTexture(nil, "BACKGROUND")
-    disc:SetTexture(TEXTURE_BACKGROUND)
+    disc:SetTexture(TEXTURE_DISC)
     disc:SetAllPoints()
-    disc:SetAlpha(DISC_ALPHA)
+    disc:SetVertexColor(0, 0, 0, DISC_ALPHA)
 
     frame.pointer = frame:CreateTexture(nil, "ARTWORK")
     frame.pointer:SetTexture(TEXTURE_POINTER)
