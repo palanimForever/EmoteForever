@@ -1,0 +1,16 @@
+## Interface: 16001
+## Title: EmoteForever |cff9966ffby Palanim|r
+## Notes: Emote wheel: wave, thank, dance and more with a single flick of the mouse.
+## Notes-deDE: Emote-Rad: Winken, Danken, Tanzen und mehr mit einer Mausbewegung.
+## Author: Palanim
+## Category: Chat & Communication
+## Category-deDE: Chat & Kommunikation
+## IconTexture: Interface\Icons\Spell_Holy_SealOfProtection
+## Version: @project-version@
+## X-Website: https://github.com/palanimForever/EmoteForever
+## SavedVariables: EmoteForeverDB
+
+Locale.lua
+Core.lua
+Emotes.lua
+Preview.lua

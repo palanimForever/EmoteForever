@@ -1,0 +1,3 @@
+# EmoteForever Changelog
+
+## Unreleased

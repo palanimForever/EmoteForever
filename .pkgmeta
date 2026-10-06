@@ -1,0 +1,10 @@
+# BigWigs packager: builds the release zip and uploads it.
+package-as: EmoteForever
+
+# Curated changelog instead of the commit list; shown on CurseForge and in the GitHub release.
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - README.md
