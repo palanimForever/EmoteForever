@@ -97,7 +97,7 @@ local function AddSection(frame, title, kind, y)
 end
 
 function Preview:Init()
-    local frame = CreateFrame("Frame", "EmoteForeverPreview", UIParent, "BasicFrameTemplateWithInset")
+    local frame = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetMovable(true)
@@ -106,7 +106,6 @@ function Preview:Init()
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
     frame:SetClampedToScreen(true)
-    table.insert(UISpecialFrames, "EmoteForeverPreview") -- closes with Escape
 
     frame.TitleText:SetText(L.previewTitle)
 

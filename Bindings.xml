@@ -1,0 +1,6 @@
+<Bindings>
+	<!-- Hold to open the emote wheel, release to perform the selected emote. -->
+	<Binding name="EMOTEFOREVER_WHEEL" runOnUp="true" category="ADDONS">
+		EmoteForever_OnWheelKey(keystate)
+	</Binding>
+</Bindings>

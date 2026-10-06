@@ -2,14 +2,20 @@ local addonName, ns = ...
 local L = ns.L
 
 -- Entry point: saved variables, branding, chat output and slash commands.
--- Load order (see .toc): Locale → Core → Emotes → Preview.
+-- Load order (see .toc): Locale → Core → Emotes → Wheel → Preview. Bindings.xml loads automatically.
 
 local TEST_DELAY = 1 -- seconds; /emf testdelay performs without a key press in the call stack
+local BINDING = "EMOTEFOREVER_WHEEL"
+local DEFAULT_KEY = "BUTTON3" -- middle mouse button
 
 ns.defaults = {
     -- Emote tokens of the wheel, clockwise from the top.
     wheel = { "WAVE", "THANK", "DANCE", "KISS", "LAUGH", "CHEER", "BOW", "HELLO" },
+    wheelStyle = "symbols", -- "symbols" | "names"
 }
+
+-- Name in Blizzard's key binding menu (Options → Keybindings → AddOns).
+BINDING_NAME_EMOTEFOREVER_WHEEL = L.bindingWheel
 
 -- Branding: author and brand color in one place so all Palanim addons look the same.
 ns.AUTHOR = "Palanim"
@@ -67,6 +73,21 @@ function handlers.ADDON_LOADED(name)
     EmoteForeverDB.probe.tests = EmoteForeverDB.probe.tests or {}
 end
 
+-- On first login, put the wheel on the middle mouse button if neither is bound yet.
+-- Only offered once, so a player who removes the binding keeps it removed.
+function handlers.PLAYER_LOGIN()
+    if EmoteForeverDB.bindingOffered or InCombatLockdown() then return end
+    EmoteForeverDB.bindingOffered = true
+    if GetBindingKey(BINDING) then return end
+    if GetBindingAction(DEFAULT_KEY) == "" then
+        SetBinding(DEFAULT_KEY, BINDING)
+        SaveBindings(GetCurrentBindingSet())
+        ns.Print(L.bindingSet)
+    else
+        ns.Print(L.bindingMissing)
+    end
+end
+
 frame:SetScript("OnEvent", function(_, event, ...) handlers[event](...) end)
 for event in pairs(handlers) do frame:RegisterEvent(event) end
 
@@ -88,8 +109,12 @@ SLASH_EMOTEFOREVER2 = "/emoteforever"
 SlashCmdList.EMOTEFOREVER = function(msg)
     local command, arg = strtrim(msg):match("^(%S*)%s*(.-)$")
     command = command:lower()
-    if command == "" or command == "preview" then
+    if command == "preview" then
         ns.Preview:Toggle()
+    elseif command == "style" then
+        EmoteForeverDB.wheelStyle = EmoteForeverDB.wheelStyle == "symbols" and "names" or "symbols"
+        ns.Wheel:ApplySettings()
+        ns.Print(EmoteForeverDB.wheelStyle == "symbols" and L.styleSymbols or L.styleNames)
     elseif command == "test" and arg ~= "" then
         RunTest(arg, false)
     elseif command == "testdelay" and arg ~= "" then
@@ -97,7 +122,9 @@ SlashCmdList.EMOTEFOREVER = function(msg)
     elseif command == "probe" then
         ns.Emotes.Probe()
     else
-        ns.Print("/emf  –  " .. L.helpPreview)
+        ns.Print(L.helpWheel)
+        ns.Print("/emf style  –  " .. L.helpStyle)
+        ns.Print("/emf preview  –  " .. L.helpPreview)
         ns.Print("/emf test <emote>  –  " .. L.helpTest)
         ns.Print("/emf testdelay <emote>  –  " .. L.helpTestDelayed)
         ns.Print("/emf probe  –  " .. L.helpProbe)

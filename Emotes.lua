@@ -81,7 +81,7 @@ local function GetBlizzardIndex()
     blizzardIndex = {}
     for i = 1, MAXEMOTEINDEX or 0 do
         local token = _G["EMOTE" .. i .. "_TOKEN"]
-        if token then blizzardIndex[token] = i end
+        if token and token ~= "UNUSED" then blizzardIndex[token] = i end
     end
     return blizzardIndex
 end
@@ -95,8 +95,10 @@ function Emotes.Exists(token)
     return GetBlizzardIndex()[token] ~= nil
 end
 
--- Localized name, taken from the slash command ("/winken" → "Winken").
+-- Localized name: our own translation for the catalog, otherwise taken from the slash command
+-- ("/winken" → "Winken"; some commands are English or run together, hence the own names).
 function Emotes.GetLabel(token)
+    if L.emotes[token] then return L.emotes[token] end
     local index = GetBlizzardIndex()[token]
     local command = index and _G["EMOTE" .. index .. "_CMD1"]
     if not command then return token end

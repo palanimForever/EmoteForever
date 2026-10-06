@@ -13,4 +13,5 @@
 Locale.lua
 Core.lua
 Emotes.lua
+Wheel.lua
 Preview.lua
