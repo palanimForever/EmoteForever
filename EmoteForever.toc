@@ -7,6 +7,7 @@
 ## Category-deDE: Chat & Kommunikation
 ## IconTexture: Interface\AddOns\EmoteForever\Media\icon
 ## Version: @project-version@
+## X-Curse-Project-ID: 1730963
 ## X-Website: https://github.com/palanimForever/EmoteForever
 ## SavedVariables: EmoteForeverDB
 ## OptionalDeps: LibDBIcon-1.0
