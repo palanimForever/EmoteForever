@@ -1,18 +1,18 @@
 <div align="center">
 
-<img src="docs/images/logo.png" alt="EmoteForever logo" width="128">
+<img src="https://raw.githubusercontent.com/palanimForever/EmoteForever/main/docs/images/logo.png" alt="EmoteForever logo" width="128">
 
 # EmoteForever
 
 **An emote wheel for World of Warcraft: Forever.**
 Hold a key, flick the mouse towards an emote, release – your character waves, thanks, dances or cheers at your target.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-9966ff)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-9966ff)](https://github.com/palanimForever/EmoteForever/blob/main/LICENSE)
 ![Game: WoW Forever](https://img.shields.io/badge/WoW-Forever%201.60-9e7a45)
 
 by **Palanim**
 
-<img src="docs/images/gallery-hero.jpg" alt="EmoteForever: the emote wheel in the game" width="900">
+<img src="https://raw.githubusercontent.com/palanimForever/EmoteForever/main/docs/images/gallery-hero.jpg" alt="EmoteForever: the emote wheel in the game" width="900">
 
 </div>
 
@@ -32,19 +32,19 @@ by **Palanim**
 
 Hold the middle mouse button and the wheel opens at your cursor, with your portrait in the center. Move towards an emote – a bronze pointer glides along – and let go. Prefer clicking? Tap the key briefly and the wheel stays open until you choose.
 
-<img src="docs/images/gallery-hold-aim-release.jpg" alt="Hold, aim, release" width="900">
+<img src="https://raw.githubusercontent.com/palanimForever/EmoteForever/main/docs/images/gallery-hold-aim-release.jpg" alt="Hold, aim, release" width="900">
 
 ### Right at your target
 
 Emotes go straight to whoever you have targeted. The wheel shows their name and portrait right below it, so you always know who gets the wave.
 
-<img src="docs/images/gallery-target.jpg" alt="The wheel shows your target" width="900">
+<img src="https://raw.githubusercontent.com/palanimForever/EmoteForever/main/docs/images/gallery-target.jpg" alt="The wheel shows your target" width="900">
 
 ### Your own wheel
 
 Choose 4 to 12 slots and put any emote on any slot: click a slot, then pick from a searchable list of every emote in the game. <kbd>Shift</kbd>-click an emote to try it out first. New slots start with popular emotes.
 
-<img src="docs/images/gallery-editor.jpg" alt="Arrange the wheel" width="900">
+<img src="https://raw.githubusercontent.com/palanimForever/EmoteForever/main/docs/images/gallery-editor.jpg" alt="Arrange the wheel" width="900">
 
 ### Minimap button
 
@@ -86,4 +86,4 @@ EmoteForever embeds [LibStub](https://www.wowace.com/projects/libstub), [Callbac
 
 ## License
 
-MIT – see [LICENSE](LICENSE). Embedded libraries and the emote symbols keep their own licenses.
+MIT – see [LICENSE](https://github.com/palanimForever/EmoteForever/blob/main/LICENSE). Embedded libraries and the emote symbols keep their own licenses.
