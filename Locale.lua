@@ -11,6 +11,8 @@ local L = {
     bindingSet = "Hold the middle mouse button to open the emote wheel. Change the key with /emf.",
     bindingMissing = "Your middle mouse button is already in use. Choose a key for the emote wheel with /emf.",
     wheelNoTarget = "no target",
+    wheelMoveTitle = "Drag the wheel",
+    wheelMoveHint = "Right-click or click elsewhere when done",
 
     -- Minimap button
     tooltipKey = "Key",
@@ -35,9 +37,17 @@ local L = {
 
     -- Settings: main page
     optSectionOpen = "Opening the wheel",
+    optKey = "Key",
+    optKeyButton = "Change",
+    optKeyTip = "Opens the game's key bindings. You'll find \"Emote wheel (hold)\" in the AddOns section. Any key or mouse button works.",
     optHowTo = "Hold, aim, release",
     optHowToButton = "Try it",
     optHowToTip = "Hold your key, move the mouse towards an emote and release. A short tap keeps the wheel open, then choose with a click.",
+    optFixed = "Fixed position",
+    optFixedTip = "The wheel always opens at the same spot instead of at the mouse. You still choose by moving the mouse towards an emote.",
+    optPosition = "Wheel position",
+    optPositionButton = "Move",
+    optPositionTip = "Shows the wheel so you can drag it where you like. Also turns on the fixed position.",
     optSectionWheel = "Wheel",
     optEditor = "Emotes on the wheel",
     optEditorButton = "Arrange",
@@ -94,6 +104,8 @@ translations.deDE = {
     bindingSet = "Halte die mittlere Maustaste, um das Emote-Rad zu öffnen. Taste ändern mit /emf.",
     bindingMissing = "Deine mittlere Maustaste ist schon belegt. Wähle eine Taste für das Emote-Rad mit /emf.",
     wheelNoTarget = "kein Ziel",
+    wheelMoveTitle = "Rad verschieben",
+    wheelMoveHint = "Rechtsklick oder Klick daneben zum Beenden",
 
     tooltipKey = "Taste",
     tooltipNoKey = "nicht belegt",
@@ -114,9 +126,17 @@ translations.deDE = {
     probeDone = "%d Emotes geprüft, %d unbekannt. Details nach /reload in EmoteForeverDB.probe.",
 
     optSectionOpen = "Rad öffnen",
+    optKey = "Taste",
+    optKeyButton = "Ändern",
+    optKeyTip = "Öffnet die Tastenbelegung des Spiels. „Emote-Rad (halten)“ steht im Abschnitt AddOns. Jede Taste und Maustaste geht.",
     optHowTo = "Halten, zielen, loslassen",
     optHowToButton = "Ausprobieren",
     optHowToTip = "Taste halten, Maus Richtung Emote bewegen und loslassen. Kurz antippen lässt das Rad offen, dann per Klick wählen.",
+    optFixed = "Feste Position",
+    optFixedTip = "Das Rad öffnet immer an derselben Stelle statt an der Maus. Gewählt wird weiterhin per Mausbewegung Richtung Emote.",
+    optPosition = "Position des Rads",
+    optPositionButton = "Verschieben",
+    optPositionTip = "Zeigt das Rad, damit du es an die gewünschte Stelle ziehen kannst. Schaltet auch die feste Position ein.",
     optSectionWheel = "Rad",
     optEditor = "Emotes im Rad",
     optEditorButton = "Belegen",

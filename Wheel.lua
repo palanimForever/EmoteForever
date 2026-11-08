@@ -1,11 +1,14 @@
 local addonName, ns = ...
 local L = ns.L
 
--- The emote wheel: opens at the mouse cursor while the key binding is held.
+-- The emote wheel: opens at the mouse cursor (or at a fixed position) while the key binding is held.
 -- Hold mode: move the mouse towards an emote and release the key.
 -- Click mode: a short tap keeps the wheel open; click to perform, click outside to close.
+-- Move mode: the wheel waits at its fixed position to be dragged; right-click or click outside to finish.
 -- The selection follows the direction from the wheel center, so slots never need the mouse;
 -- in hold mode the wheel ignores the mouse completely, so the key release reaches the binding.
+-- At a fixed position the hold mode measures the direction from where the cursor was at opening,
+-- so a flick of the mouse works the same wherever the wheel sits.
 --
 -- The look (disc, slots, portrait, pointer) is a reusable view: Wheel.CreateView builds it for the
 -- wheel in the world and for the preview in the editor.
@@ -52,6 +55,12 @@ local POINTER_FADE_SPEED = 8 -- alpha per second when the corner appears or disa
 -- Target below the emote name: small portrait in the same bronze ring, name next to it.
 local TARGET_RING_SIZE = 48
 local TARGET_PORTRAIT_SIZE = 28
+
+-- Hold mode at a fixed position: a small ring where the cursor was at opening. Its outer edge marks the
+-- dead zone, so the player can find the way back to cancel. Bright while releasing would cancel.
+local ORIGIN_RING_SIZE = 2 * DEAD_ZONE / 0.7 -- the ring texture's outer edge is at 70 % of its canvas
+local ORIGIN_ALPHA = 0.35 -- an emote is selected
+local ORIGIN_ALPHA_CANCEL = 0.9 -- inside the dead zone: releasing performs nothing
 
 local TEXTURE_BACKGROUND = "Interface\\Minimap\\UI-Minimap-Background"
 local TEXTURE_HIGHLIGHT = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
@@ -258,15 +267,56 @@ end
 
 -- The wheel in the world ----------------------------------------------------------------------------
 
-local mode -- nil (closed) | "hold" | "click"
+local mode -- nil (closed) | "hold" | "click" | "move"
 local openedAt, closedAt = 0, 0
+local originX, originY -- hold mode at a fixed position: cursor at opening (view coordinates)
 
--- Selection from the mouse direction relative to the wheel center.
-local function UpdateSelection(view)
+local function GetCursor(view)
     local scale = view:GetEffectiveScale()
     local x, y = GetCursorPosition()
-    local centerX, centerY = view:GetCenter()
-    view:SetSelected(Wheel.SlotAt(x / scale - centerX, y / scale - centerY, #EmoteForeverDB.wheel))
+    return x / scale, y / scale
+end
+
+-- Selection from the mouse direction relative to the wheel center (or to the cursor at opening).
+-- In click mode only while the mouse is over the wheel: a click elsewhere closes it without an emote.
+local function UpdateSelection(view)
+    local x, y = GetCursor(view)
+    local centerX, centerY
+    if mode == "hold" and originX then
+        centerX, centerY = originX, originY
+    elseif mode == "click" and not view:IsMouseOver() then
+        view:SetSelected(nil)
+        return
+    else
+        centerX, centerY = view:GetCenter()
+    end
+    view:SetSelected(Wheel.SlotAt(x - centerX, y - centerY, #EmoteForeverDB.wheel))
+end
+
+-- Fixed position: wheel center as offset from the screen center, saved in UIParent units so it
+-- stays put when the wheel size changes (SetPoint offsets are in the wheel's own scale).
+local function PlaceAtFixedPosition(view)
+    local scale = view:GetScale()
+    view:ClearAllPoints()
+    view:SetPoint("CENTER", UIParent, "CENTER", EmoteForeverDB.wheelX / scale, EmoteForeverDB.wheelY / scale)
+end
+
+local function SaveFixedPosition(view)
+    local scale = view:GetScale()
+    local x, y = view:GetCenter()
+    local parentX, parentY = UIParent:GetCenter()
+    EmoteForeverDB.wheelX = Round(x * scale - parentX)
+    EmoteForeverDB.wheelY = Round(y * scale - parentY)
+    PlaceAtFixedPosition(view) -- StopMovingOrSizing leaves its own anchor behind
+end
+
+-- Move mode: hint texts instead of emote name and target.
+local function ShowMoveHint(view)
+    view.name:SetText(L.wheelMoveTitle)
+    view.target:SetText(L.wheelMoveHint)
+    view.target:SetTextColor(GRAY_FONT_COLOR:GetRGB())
+    view.targetPortrait:Hide()
+    view.targetRing:Hide()
 end
 
 function Wheel:Init()
@@ -274,6 +324,12 @@ function Wheel:Init()
     view:SetFrameStrata("DIALOG")
     view:SetClampedToScreen(true)
     view:Hide()
+
+    -- Part of the wheel (fades with it), but anchored at the cursor; see ORIGIN_RING_SIZE.
+    view.originRing = view:CreateTexture(nil, "OVERLAY")
+    view.originRing:SetTexture(TEXTURE_RING)
+    view.originRing:SetSize(ORIGIN_RING_SIZE, ORIGIN_RING_SIZE)
+    view.originRing:Hide()
 
     local fadeIn = view:CreateAnimationGroup()
     local alpha = fadeIn:CreateAnimation("Alpha")
@@ -283,12 +339,26 @@ function Wheel:Init()
     view.fadeIn = fadeIn
 
     -- Click mode: a click on the wheel performs the selection; GLOBAL_MOUSE_DOWN closes on clicks elsewhere.
+    -- Move mode: drag with the left button, right-click finishes.
+    view:SetMovable(true)
+    view:RegisterForDrag("LeftButton")
     view:SetScript("OnMouseDown", function(_, button)
+        if mode == "move" then
+            if button == "RightButton" then Wheel:Close() end
+            return
+        end
         if button == "LeftButton" then Wheel.Perform() end
         Wheel:Close()
     end)
+    view:SetScript("OnDragStart", function()
+        if mode == "move" then view:StartMoving() end
+    end)
+    view:SetScript("OnDragStop", function()
+        view:StopMovingOrSizing()
+        if mode == "move" then SaveFixedPosition(view) end
+    end)
     view:SetScript("OnEvent", function(_, event, button) -- button = unit for UNIT_PORTRAIT_UPDATE
-        if event == "GLOBAL_MOUSE_DOWN" and mode == "click" and not view:IsMouseOver() then
+        if event == "GLOBAL_MOUSE_DOWN" and (mode == "click" or mode == "move") and not view:IsMouseOver() then
             Wheel:Close()
         elseif event == "GLOBAL_MOUSE_UP" and mode == "hold" and button == "MiddleButton" then
             -- Safety net: the binding's key-up can be lost (e.g. while the game window loses focus).
@@ -300,7 +370,10 @@ function Wheel:Init()
         end
     end)
     view:SetScript("OnUpdate", function(_, elapsed) -- only runs while the wheel is shown
-        UpdateSelection(view)
+        if mode ~= "move" then UpdateSelection(view) end
+        if view.originRing:IsShown() then
+            view.originRing:SetAlpha(view.selected and ORIGIN_ALPHA or ORIGIN_ALPHA_CANCEL)
+        end
         view:Animate(elapsed)
     end)
 
@@ -312,34 +385,66 @@ function Wheel:ApplySettings()
     if not self.frame then return end
     self.frame:SetScale(EmoteForeverDB.wheelScale / 100)
     self.frame:Layout()
+    if EmoteForeverDB.wheelFixed or mode == "move" then PlaceAtFixedPosition(self.frame) end
 end
 
-function Wheel:Open(asClickMode)
+-- newMode: "hold", "click" or "move".
+local function Show(self, newMode)
     if not self.frame then self:Init() end
     if mode then self:Close() end
     local view = self.frame
-    local scale = view:GetEffectiveScale()
-    local x, y = GetCursorPosition()
+    local x, y = GetCursor(view)
     view:ClearAllPoints()
-    view:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x / scale, y / scale)
+    if EmoteForeverDB.wheelFixed or newMode == "move" then
+        PlaceAtFixedPosition(view)
+    else
+        view:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+    end
+    if EmoteForeverDB.wheelFixed and newMode == "hold" then
+        originX, originY = x, y
+        view.originRing:ClearAllPoints()
+        view.originRing:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+        view.originRing:SetAlpha(ORIGIN_ALPHA_CANCEL)
+        view.originRing:Show()
+    else
+        originX, originY = nil, nil
+        view.originRing:Hide()
+    end
 
-    mode = asClickMode and "click" or "hold"
+    mode = newMode
     openedAt = GetTime()
     view:SetSelected(nil)
     view:ResetPointer()
     view:UpdatePlayerPortrait()
-    view:UpdateTarget()
-    view:EnableMouse(mode == "click")
+    view:EnableMouse(mode ~= "hold")
     view:RegisterEvent("GLOBAL_MOUSE_DOWN")
-    view:RegisterEvent("GLOBAL_MOUSE_UP")
-    view:RegisterEvent("PLAYER_TARGET_CHANGED")
     view:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "player", "target")
+    if mode == "move" then
+        ShowMoveHint(view)
+    else
+        view:UpdateTarget()
+        view:RegisterEvent("GLOBAL_MOUSE_UP")
+        view:RegisterEvent("PLAYER_TARGET_CHANGED")
+    end
     view:Show()
     view.fadeIn:Play()
 end
 
+function Wheel:Open(asClickMode)
+    Show(self, asClickMode and "click" or "hold")
+end
+
+-- Shows the wheel at its fixed position to be dragged somewhere else.
+function Wheel:StartMoving()
+    Show(self, "move")
+end
+
 function Wheel:Close()
     if not self.frame then return end
+    if mode == "move" then
+        self.frame:StopMovingOrSizing()
+        SaveFixedPosition(self.frame)
+    end
     mode = nil
     closedAt = GetTime()
     self.frame:UnregisterAllEvents()
@@ -362,6 +467,7 @@ function Wheel:Release()
     elseif GetTime() - openedAt < TAP_TIME then
         mode = "click"
         self.frame:EnableMouse(true)
+        self.frame.originRing:Hide() -- now the cursor points at the wheel itself
     else
         self:Close()
     end

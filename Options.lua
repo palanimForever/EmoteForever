@@ -17,14 +17,22 @@ StaticPopupDialogs["EMOTEFOREVER_RESET_SETTINGS"] = {
     timeout = 0,
 }
 
-local function Header(category, text)
-    local layout = SettingsPanel:GetLayout(category)
-    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(text))
+-- Add every element through Settings.RegisterInitializer: it inserts into the page layout in secure
+-- execution. Settings.CreateCheckbox & co. (and layout:AddInitializer) insert from our code instead,
+-- which taints the layout. Blizzard's settings search reads every layout, so a search would then run
+-- tainted and get blocked on protected calls of other entries (e.g. the Discord button).
+local function Add(category, initializer)
+    Settings.RegisterInitializer(category, initializer)
+    return initializer
 end
 
+local function Header(category, text)
+    Add(category, CreateSettingsListSectionHeaderInitializer(text))
+end
+
+-- No search tags: AddSearchTags would run in our code and taint the tags the search reads.
 local function Button(category, name, buttonText, onClick, tooltip)
-    local layout = SettingsPanel:GetLayout(category)
-    layout:AddInitializer(CreateSettingsButtonInitializer(name, buttonText, onClick, tooltip, true))
+    Add(category, CreateSettingsButtonInitializer(name, buttonText, onClick, tooltip, false))
 end
 
 local function Register(category, key, name, onChange)
@@ -40,28 +48,39 @@ local function Register(category, key, name, onChange)
 end
 
 local function Checkbox(category, key, name, tooltip)
-    return Settings.CreateCheckbox(category, Register(category, key, name), tooltip)
+    return Add(category, Settings.CreateCheckboxInitializer(Register(category, key, name), nil, tooltip))
 end
 
 local function Slider(category, key, name, tooltip, min, max, step, formatter, onChange)
     local options = Settings.CreateSliderOptions(min, max, step)
     options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, formatter)
-    return Settings.CreateSlider(category, Register(category, key, name, onChange), options, tooltip)
+    return Add(category, Settings.CreateSliderInitializer(Register(category, key, name, onChange), options, tooltip))
 end
 
--- Blizzard's own key binding row (as in Options → Keybindings): click it, then press a key or mouse button.
-local function KeyBinding(category)
-    local bindingIndex = C_KeyBindings and C_KeyBindings.GetBindingIndex(ns.BINDING)
-    if not bindingIndex then return end
-    local initializer = CreateKeybindingEntryInitializer(bindingIndex, true)
-    initializer:AddSearchTags(L.bindingWheel)
-    SettingsPanel:GetLayout(category):AddInitializer(initializer)
+-- The key is set on Blizzard's key binding page (section "AddOns"). Deliberately no embedded
+-- key binding row: CreateKeybindingEntryInitializer replaces MatchesSearchTags with a function
+-- created in our code, and the settings search calls it on every search (tainted).
+-- The search still finds the binding through Blizzard's own key binding entries.
+local function OpenKeyBindings()
+    if InCombatLockdown() then
+        ns.Print(L.notInCombat)
+        return
+    end
+    Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID, ADDONS)
 end
 
 local function RegisterMainPage(category)
     Header(category, L.optSectionOpen)
-    KeyBinding(category)
+    if Settings.KEYBINDINGS_CATEGORY_ID then
+        Button(category, L.optKey, L.optKeyButton, OpenKeyBindings, L.optKeyTip)
+    end
     Button(category, L.optHowTo, L.optHowToButton, function() ns.Wheel:Open(true) end, L.optHowToTip)
+    Checkbox(category, "wheelFixed", L.optFixed, L.optFixedTip)
+    -- Moving the wheel implies the fixed position, so the button also turns it on.
+    Button(category, L.optPosition, L.optPositionButton, function()
+        Options:SetValue("wheelFixed", true)
+        ns.Wheel:StartMoving()
+    end, L.optPositionTip)
 
     Header(category, L.optSectionWheel)
     Button(category, L.optEditor, L.optEditorButton, function() Options:OpenEditor() end, L.optEditorTip)

@@ -17,6 +17,8 @@ ns.defaults = {
     wheel = { "WAVE", "THANK", "DANCE", "KISS", "LAUGH", "CHEER", "BOW", "HELLO" },
     wheelSize = 8, -- number of slots; kept in sync with #wheel
     wheelScale = 100, -- percent
+    wheelFixed = false, -- open at wheelX/wheelY instead of at the mouse cursor
+    wheelX = 0, wheelY = 0, -- fixed position: offset of the wheel center from the screen center
     showMinimapButton = true,
     minimap = {}, -- minimap button position, managed by LibDBIcon
 }

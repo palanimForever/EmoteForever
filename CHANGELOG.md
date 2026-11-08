@@ -1,6 +1,16 @@
 # EmoteForever Changelog
 
-## Unreleased
+## 1.0.0
+
+### New
+- Fixed position: the wheel can open at the same spot every time instead of at the mouse (/emf → "Fixed position"). "Move" lets you drag it where you like. Choosing still works with a flick of the mouse, wherever the cursor is. A small ring marks where you started: move back into it and release to cancel.
+
+### Changed
+- When the wheel stays open for a click, an emote only lights up while the mouse is over the wheel (a click elsewhere closes it).
+- The key is now changed in the game's key bindings: "Change" in the settings takes you there.
+
+### Fixed
+- Searching in the game's options could show "EmoteForever has been blocked from an action only available to the Blizzard UI".
 
 ## 0.1.0-beta
 

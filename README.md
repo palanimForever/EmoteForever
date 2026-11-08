@@ -18,7 +18,7 @@ by **Palanim**
 
 ## Highlights
 
-- **Hold, aim, release** – the wheel opens right at your cursor
+- **Hold, aim, release** – the wheel opens right at your cursor, or at a fixed spot of your choice
 - **Right at your target** – the wheel shows who your emote goes to
 - **48 emotes with their own symbols** – plus every other emote of the game
 - **Your own wheel** – 4 to 12 slots, arranged in a searchable editor
