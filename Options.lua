@@ -57,23 +57,9 @@ local function Slider(category, key, name, tooltip, min, max, step, formatter, o
     return Add(category, Settings.CreateSliderInitializer(Register(category, key, name, onChange), options, tooltip))
 end
 
--- The key is set on Blizzard's key binding page (section "AddOns"). Deliberately no embedded
--- key binding row: CreateKeybindingEntryInitializer replaces MatchesSearchTags with a function
--- created in our code, and the settings search calls it on every search (tainted).
--- The search still finds the binding through Blizzard's own key binding entries.
-local function OpenKeyBindings()
-    if InCombatLockdown() then
-        ns.Print(L.notInCombat)
-        return
-    end
-    Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID, ADDONS)
-end
-
 local function RegisterMainPage(category)
     Header(category, L.optSectionOpen)
-    if Settings.KEYBINDINGS_CATEGORY_ID then
-        Button(category, L.optKey, L.optKeyButton, OpenKeyBindings, L.optKeyTip)
-    end
+    Add(category, ns.KeyBinding.CreateInitializer()) -- own row, see KeyBinding.lua
     Button(category, L.optHowTo, L.optHowToButton, function() ns.Wheel:Open(true) end, L.optHowToTip)
     Checkbox(category, "wheelFixed", L.optFixed, L.optFixedTip)
     -- Moving the wheel implies the fixed position, so the button also turns it on.

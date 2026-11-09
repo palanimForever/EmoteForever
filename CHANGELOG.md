@@ -1,6 +1,9 @@
 # EmoteForever Changelog
 
-## Unreleased
+## 1.1.0
+
+### New
+- Set the key for the wheel right on the settings page again: click the field and press a key or mouse button. It is the same key as in the game's key bindings.
 
 ## 1.0.0
 

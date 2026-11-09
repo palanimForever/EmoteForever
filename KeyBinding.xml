@@ -1,0 +1,19 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- "Key" row on the settings page; logic in KeyBinding.lua. Same size and button as
+	     Blizzard's settings rows and key binding buttons. -->
+	<Frame name="EmoteForeverKeyBindingRowTemplate" inherits="SettingsListElementTemplate"
+		mixin="EmoteForeverKeyBindingRowMixin" virtual="true">
+		<Size x="280" y="26"/>
+		<Frames>
+			<Button parentKey="Button" inherits="KeyBindingFrameBindingButtonTemplate">
+				<Size x="200" y="22"/>
+			</Button>
+		</Frames>
+		<Scripts>
+			<OnLoad method="OnLoad"/>
+			<OnShow method="OnShow"/>
+			<OnHide method="OnHide"/>
+			<OnEvent method="OnEvent"/>
+		</Scripts>
+	</Frame>
+</Ui>

@@ -21,4 +21,6 @@ Wheel.lua
 Preview.lua
 MinimapButton.lua
 Editor.lua
+KeyBinding.lua
+KeyBinding.xml
 Options.lua
