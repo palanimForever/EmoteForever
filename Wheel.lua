@@ -2,8 +2,9 @@ local addonName, ns = ...
 local L = ns.L
 
 -- The emote wheel: opens at the mouse cursor (or at a fixed position) while the key binding is held.
--- Hold mode: move the mouse towards an emote and release the key.
--- Click mode: a short tap keeps the wheel open; click to perform, click outside to close.
+-- Hold mode: move the mouse towards an emote and release the key; right-click cancels.
+-- Click mode: a short tap (or every press, see wheelClickMode) keeps the wheel open; click to perform,
+-- right-click or click outside to close.
 -- Move mode: the wheel waits at its fixed position to be dragged; right-click or click outside to finish.
 -- The selection follows the direction from the wheel center, so slots never need the mouse;
 -- in hold mode the wheel ignores the mouse completely, so the key release reaches the binding.
@@ -61,6 +62,7 @@ local TARGET_PORTRAIT_SIZE = 28
 local ORIGIN_RING_SIZE = 2 * DEAD_ZONE / 0.7 -- the ring texture's outer edge is at 70 % of its canvas
 local ORIGIN_ALPHA = 0.35 -- an emote is selected
 local ORIGIN_ALPHA_CANCEL = 0.9 -- inside the dead zone: releasing performs nothing
+local ORIGIN_LEVEL_OFFSET = 10 -- above the slots (child frames of the wheel), which would hide the ring
 
 local TEXTURE_BACKGROUND = "Interface\\Minimap\\UI-Minimap-Background"
 local TEXTURE_HIGHLIGHT = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
@@ -293,6 +295,14 @@ local function UpdateSelection(view)
     view:SetSelected(Wheel.SlotAt(x - centerX, y - centerY, #EmoteForeverDB.wheel))
 end
 
+-- Right-click cancels the hold mode, unless the right button itself opens the wheel (also with modifiers).
+local function IsBoundToRightButton()
+    for _, key in ipairs({ GetBindingKey(ns.BINDING) }) do
+        if key:find("BUTTON2$") then return true end
+    end
+    return false
+end
+
 -- Fixed position: wheel center as offset from the screen center, saved in UIParent units so it
 -- stays put when the wheel size changes (SetPoint offsets are in the wheel's own scale).
 local function PlaceAtFixedPosition(view)
@@ -326,7 +336,11 @@ function Wheel:Init()
     view:Hide()
 
     -- Part of the wheel (fades with it), but anchored at the cursor; see ORIGIN_RING_SIZE.
-    view.originRing = view:CreateTexture(nil, "OVERLAY")
+    -- In its own frame: a texture of the wheel itself would be drawn below the slots.
+    local originFrame = CreateFrame("Frame", nil, view)
+    originFrame:SetAllPoints()
+    originFrame:SetFrameLevel(view:GetFrameLevel() + ORIGIN_LEVEL_OFFSET)
+    view.originRing = originFrame:CreateTexture(nil, "OVERLAY")
     view.originRing:SetTexture(TEXTURE_RING)
     view.originRing:SetSize(ORIGIN_RING_SIZE, ORIGIN_RING_SIZE)
     view.originRing:Hide()
@@ -360,6 +374,9 @@ function Wheel:Init()
     view:SetScript("OnEvent", function(_, event, button) -- button = unit for UNIT_PORTRAIT_UPDATE
         if event == "GLOBAL_MOUSE_DOWN" and (mode == "click" or mode == "move") and not view:IsMouseOver() then
             Wheel:Close()
+        elseif event == "GLOBAL_MOUSE_DOWN" and mode == "hold" and button == "RightButton"
+            and not IsBoundToRightButton() then
+            Wheel:Close() -- cancel without an emote; the key release then does nothing
         elseif event == "GLOBAL_MOUSE_UP" and mode == "hold" and button == "MiddleButton" then
             -- Safety net: the binding's key-up can be lost (e.g. while the game window loses focus).
             Wheel:Release()
@@ -478,7 +495,7 @@ function Wheel:OnKey(keystate)
         if mode then
             self:Close() -- pressing again closes the click mode
         elseif GetTime() - closedAt > REOPEN_BLOCK then
-            self:Open(false)
+            self:Open(EmoteForeverDB.wheelClickMode)
         end
     else
         self:Release()

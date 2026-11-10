@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### New
+- Right-click while holding the key cancels the wheel without an emote.
+- "Choose with a click" option: pressing the key opens the wheel and keeps it open, then you pick an emote with a click.
+
+### Fixed
+- Fixed position: the ring marking where you started (move back into it to cancel) could be hidden behind an emote slot.
+
 ## 1.1.0
 
 ### New

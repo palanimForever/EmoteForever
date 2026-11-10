@@ -61,6 +61,7 @@ local function RegisterMainPage(category)
     Header(category, L.optSectionOpen)
     Add(category, ns.KeyBinding.CreateInitializer()) -- own row, see KeyBinding.lua
     Button(category, L.optHowTo, L.optHowToButton, function() ns.Wheel:Open(true) end, L.optHowToTip)
+    Checkbox(category, "wheelClickMode", L.optClickMode, L.optClickModeTip)
     Checkbox(category, "wheelFixed", L.optFixed, L.optFixedTip)
     -- Moving the wheel implies the fixed position, so the button also turns it on.
     Button(category, L.optPosition, L.optPositionButton, function()
