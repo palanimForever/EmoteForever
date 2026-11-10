@@ -1,6 +1,6 @@
 # EmoteForever Changelog
 
-## Unreleased
+## 1.2.0
 
 ### New
 - Right-click while holding the key cancels the wheel without an emote.
